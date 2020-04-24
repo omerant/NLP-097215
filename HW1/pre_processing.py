@@ -58,7 +58,9 @@ class FeatureStatistics:
         self.fd_is_lat_word = ft.IsLastWordDict()
         # symbols
         self.fd_has_symbol = ft.ContainsSymbolDict()
-
+        #word length
+        for i in range(1,14):
+            setattr(self, 'fd_word_length'+str(i), ft.WordsLengthDict(i))
     @timeit
     def fill_ordered_history_list(self):
         with open(self.file_path) as f:
@@ -252,7 +254,7 @@ class FeatureStatistics:
 
 
 if __name__ == '__main__':
-    train1_path = 'data/train1.wtag'
+    train1_path = 'data/train1_short.wtag'
     feature_statistics = FeatureStatistics(input_file_path=train1_path)
     feature_statistics.pre_process(fill_possible_tag_dict=True)
     pass

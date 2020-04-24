@@ -2,6 +2,7 @@ from collections import OrderedDict, namedtuple
 from abc import abstractmethod, ABC
 from common_features import common_tags
 import re
+import utils
 from constant_tag_word_sets import WordConstantTagSets
 
 
@@ -323,7 +324,7 @@ class HasOnlyDigitDict(FeatureDict):
         for sentence in hist_sentence_list:
             for hist in sentence:
                 cur_word = hist.cword
-                if cur_word.isdigit():
+                if utils.is_number(cur_word):
                     self.insert_key(self.dict_key)
 
     def get_feature_index_and_count_from_history(self, history: History):
@@ -467,4 +468,27 @@ class ContainsSymbolDict(FeatureDict):
         else:
             return self.INVALID_IDX, self.INVALID_VAL
 
+class WordsLengthDict(FeatureDict):
+    def __init__(self, len):
+        super().__init__()
+        self.len = len
+        self.dict_key = 'word_length'
+    def fill_dict(self, hist_sentence_list: [[History]]):
+        """
+            Extract out of text all word length/tag pairs - <len(w), t_i>
+            fill all word len/tag pairs with index of appearance
+
+        """
+        for sentence in hist_sentence_list:
+            for hist in sentence:
+                cur_word = hist.cword
+                cur_tag = hist.ctag
+                if len(cur_word) == self.len:
+                    self.insert_key((self.len))
+
+    def get_feature_index_and_count_from_history(self, history: History):
+        cur_word = history.cword
+        if len(cur_word) != self.len:
+            return self.INVALID_IDX, self.INVALID_VAL
+        return 0, self.dict.get(self.dict_key, 0)
 
