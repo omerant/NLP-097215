@@ -42,3 +42,13 @@ def timeit(method):
         print('%r  %2.2f ms' % (method.__name__, (te - ts) * 1000))
         return result
     return timed
+
+def is_number(s):
+    try:
+        float(s)
+        return True
+    except ValueError:
+        for letter in s:
+            if not letter.isdigit() and letter != ',':
+                return False
+        return True
