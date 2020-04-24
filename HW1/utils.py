@@ -1,9 +1,8 @@
 import os
 import pickle
-import numpy as np
-import itertools
 import matplotlib.pyplot as plt
 from collections import OrderedDict
+import time
 
 
 def get_training_info(weights_path='weights'):
@@ -35,25 +34,11 @@ def get_training_info(weights_path='weights'):
     return training_info
 
 
-def plot_training_likelihood(train_info: dict):
-    for i, reg_lambda in enumerate(train_info.keys()):
-        plot_training_likelihood_per_lambda(
-            x_num_iter=train_info[reg_lambda][0],
-            y_likelihood=training_info[reg_lambda][1],
-            reg_lambda=reg_lambda,
-            num_figure=i
-        )
-
-
-def plot_training_likelihood_per_lambda(x_num_iter, y_likelihood, reg_lambda, num_figure):
-    new_x, new_y = zip(*sorted(zip(x_num_iter, y_likelihood)))
-    plt.figure(num_figure)
-    plt.title(f'lambda = {reg_lambda}')
-    plt.plot(new_x, new_y)
-    plt.xlabel('num_iterations')
-    plt.ylabel('likelihood')
-    plt.show()
-
-
-training_info = get_training_info()
-plot_training_likelihood(training_info)
+def timeit(method):
+    def timed(*args, **kw):
+        ts = time.time()
+        result = method(*args, **kw)
+        te = time.time()
+        print('%r  %2.2f ms' % (method.__name__, (te - ts) * 1000))
+        return result
+    return timed
