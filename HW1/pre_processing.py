@@ -60,11 +60,7 @@ class FeatureStatistics:
         with open(self.file_path) as f:
             hist_sentence_list = []
             for idx, line in enumerate(f):
-                print(f'line idx: {idx+1}')
-                splited_words = split(' |,\n', line)
-                # remove \n from last part of sentence
-                if "\n" in splited_words[-1]:
-                    splited_words[-1] = splited_words[-1][:-1]
+                splited_words = split(' |,\n', line[:-1])  # remove \n from last part of sentence
                 new_sentence_hist_list = []
                 for word_idx in range(len(splited_words)):
                     cword, ctag = split('_', splited_words[word_idx])
@@ -82,9 +78,7 @@ class FeatureStatistics:
                         pptag = new_sentence_hist_list[prev_hist_idx].ptag
 
                     # check if last in sentence
-                    print(f'cur word: {cword}')
                     if word_idx + 1 < len(splited_words):
-                        print(f'next token: {splited_words[word_idx+1]}')
                         nword, _ = split('_', splited_words[word_idx+1])
                     else:
                         nword = WordAndTagConstants.NWORD_SENTENCE_END
