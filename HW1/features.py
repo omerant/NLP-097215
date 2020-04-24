@@ -468,11 +468,13 @@ class ContainsSymbolDict(FeatureDict):
         else:
             return self.INVALID_IDX, self.INVALID_VAL
 
+
 class WordsLengthDict(FeatureDict):
     def __init__(self, len):
         super().__init__()
         self.len = len
         self.dict_key = 'word_length'
+
     def fill_dict(self, hist_sentence_list: [[History]]):
         """
             Extract out of text all word length/tag pairs - <len(w), t_i>

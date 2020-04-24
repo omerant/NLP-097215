@@ -20,7 +20,6 @@ class FeatureStatistics:
         self.word_possible_tag_with_threshold_dict = self.fill_possible_tags_with_certainty_dict()
         self.tag_possible_word_dict = self.fill_tag_possible_word_dict()
         self.all_possible_tags_dict = dict()
-        setattr(self, 'a', 'a')
         self.version = 1
         self.threshold = threshold
         self.num_features = 0
@@ -58,9 +57,11 @@ class FeatureStatistics:
         self.fd_is_lat_word = ft.IsLastWordDict()
         # symbols
         self.fd_has_symbol = ft.ContainsSymbolDict()
+
         #word length
         for i in range(1,14):
             setattr(self, 'fd_word_length'+str(i), ft.WordsLengthDict(i))
+
     @timeit
     def fill_ordered_history_list(self):
         with open(self.file_path) as f:
@@ -170,7 +171,8 @@ class FeatureStatistics:
             if idx % 10 == 0:
                 print(f'filled sentence {idx}')
             for hist in sentence:
-                for ctag in self.tags_set:
+                tag_set = self.word_possible_tag_set[hist.cword]
+                for ctag in tag_set:
                     new_hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag,
                                        ctag=ctag, nword=hist.nword, pword=hist.pword)
                     self.all_possible_tags_dict[new_hist] = self.get_non_zero_sparse_feature_vec_indices_from_history(new_hist)
