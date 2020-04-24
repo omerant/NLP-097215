@@ -16,9 +16,11 @@ class FeatureStatistics:
         self.num_sentences = len(self.history_sentence_list)
         self.tags_set = self.fill_tags_set()
         self.word_possible_tag_dict = self.fill_word_possible_tag_dict()
+        self.word_possible_tag_set = self.fill_word_possible_tag_set()
         self.word_possible_tag_with_threshold_dict = self.fill_possible_tags_with_certainty_dict()
         self.tag_possible_word_dict = self.fill_tag_possible_word_dict()
         self.all_possible_tags_dict = dict()
+        setattr(self, 'a', 'a')
         self.version = 1
         self.threshold = threshold
         self.num_features = 0
@@ -109,6 +111,15 @@ class FeatureStatistics:
                 else:
                     possible_tags_dict[cword][ctag] = 1
         return possible_tags_dict
+
+    def fill_word_possible_tag_set(self):
+        possible_tags_set = defaultdict(set)
+        for sentence in self.history_sentence_list:
+            for hist in sentence:
+                cword = hist.cword
+                ctag = hist.ctag
+                possible_tags_set[cword].add(ctag)
+        return possible_tags_set
 
     def fill_possible_tags_with_certainty_dict(self, certainty=0.995, appearances=5):
         possible_tags_with_certainty_dict = dict()
