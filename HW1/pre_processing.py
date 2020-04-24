@@ -16,6 +16,8 @@ class FeatureStatistics:
         self.num_sentences = len(self.history_sentence_list)
         self.tags_set = self.fill_tags_set()
         self.word_possible_tag_dict = self.fill_word_possible_tag_dict()
+        self.word_possible_tag_with_threshold_dict = self.fill_possible_tags_with_certainty_dict()
+        self.tag_possible_word_dict = self.fill_tag_possible_word_dict()
         self.all_possible_tags_dict = dict()
         self.version = 1
         self.threshold = threshold
@@ -97,13 +99,39 @@ class FeatureStatistics:
         return tag_set
 
     def fill_word_possible_tag_dict(self):
-        possible_tags_dict = defaultdict(set)
+        possible_tags_dict = defaultdict(OrderedDict)
         for sentence in self.history_sentence_list:
             for hist in sentence:
                 cword = hist.cword
                 ctag = hist.ctag
-                possible_tags_dict[cword].add(ctag)
+                if possible_tags_dict[cword].get(ctag):
+                    possible_tags_dict[cword][ctag] += 1
+                else:
+                    possible_tags_dict[cword][ctag] = 1
         return possible_tags_dict
+
+    def fill_possible_tags_with_certainty_dict(self, certainty=0.995, appearances=5):
+        possible_tags_with_certainty_dict = dict()
+        for word, tag_count_dict in self.word_possible_tag_dict.items():
+            total_count = 0
+            for tag, tag_count in tag_count_dict.items():
+                total_count += tag_count
+
+            if total_count > appearances:
+                for t, t_count in tag_count_dict.items():
+                    if t_count / total_count > certainty:
+                        possible_tags_with_certainty_dict[word] = (t, t_count)
+        return possible_tags_with_certainty_dict
+
+    def fill_tag_possible_word_dict(self):
+        tag_word_dict = defaultdict(set)
+        for sentence in self.history_sentence_list:
+            for hist in sentence:
+                cword = hist.cword
+                ctag = hist.ctag
+                tag_word_dict[ctag].add(cword)
+
+        return tag_word_dict
 
     @timeit
     def print_num_features(self):
@@ -203,19 +231,13 @@ class FeatureStatistics:
         self.filter_features_by_threshold()
         self.fill_num_features()
         self.print_num_features()
+
         hist_ft_dict_path = os.path.join('hist_feature_dict', f'version={self.version}_threshold={self.threshold}')
         if fill_possible_tag_dict:
             self.fill_all_possible_tags_dict(hist_ft_dict_path)
         else:
             dump_path = hist_ft_dict_path
             self.load_all_possible_tags_dict(path=dump_path)
-
-    def get_feature_dict_names(self):
-        feature_names = sorted([attr for attr in dir(self) if attr.startswith('fd')])
-        feature_names_str = ''
-        for feature_name in feature_names:
-            feature_names_str += feature_name + '\n'
-        return feature_names_str
 
 
 if __name__ == '__main__':
