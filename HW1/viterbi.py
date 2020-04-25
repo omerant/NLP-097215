@@ -2,6 +2,7 @@ import numpy as np
 import pickle
 import os
 from features import History
+from utils import timeit
 
 #genrally - t is TAGi-2, u is TAGi-1, v is currentTAG
 #probability func
@@ -73,14 +74,14 @@ class Viterbi:
 
         return tag_set
 
+    @timeit
     def predict(self, sentence):
         self.pi_tables = np.full(shape=(len(sentence) + 1, len(self.tags_set), len(self.tags_set)), fill_value=-np.inf)
         self.pi_tables[0, self.tag_to_index["*"], self.tag_to_index["*"]] = 0.
         self.bp_tables = np.full(shape=self.pi_tables.shape, fill_value=10**2, dtype=np.int)
 
-        print('calculating prob_dict')
+        # print('calculating prob_dict')
         for idx, hist in enumerate(sentence):
-            print(f'calculating prob for {hist.cword}')
             if idx == 0:
                 pptag_set = {'*'}
                 ptag_set = {'*'}
@@ -99,7 +100,6 @@ class Viterbi:
                         n_hist = History(cword=hist.cword, pptag=pptag, ptag=ptag,
                                          nword=hist.nword, pword=hist.pword, ctag=c_tag)
                         if not self.prob_dict.get(n_hist, None):
-                            # if not self.exp_dict.get(n_hist, None):
                             if not self.all_possible_tags_dict.get(n_hist, None):
                                 self.all_possible_tags_dict[n_hist] = self.get_feature_from_hist(n_hist)
                             dot_prod = np.sum(self.v[self.all_possible_tags_dict[n_hist]])
@@ -112,7 +112,7 @@ class Viterbi:
                         if not self.prob_dict.get(hist, None):
                             self.prob_dict[hist] = self.exp_dict[hist] / norm_i
 
-        print('calculating pi')
+        # print('calculating pi')
         for ind, k in enumerate(range(1, len(sentence) + 1)):
             cur_hist = sentence[ind]
             if ind == 0:
@@ -139,7 +139,6 @@ class Viterbi:
                         res = q + pi
                         if res > max_pi_mul_q_val:
                             max_pi_mul_q_val = res
-                            print(f'current max res: {max_pi_mul_q_val}')
                             max_t_index = t_index
 
                     self.pi_tables[k, self.tag_to_index[u], self.tag_to_index[v]] = max_pi_mul_q_val
@@ -149,7 +148,7 @@ class Viterbi:
 
         t_n_m_1, t_n = np.unravel_index(max_ind, self.pi_tables[-1, :, :].shape)
         res_numbers = [t_n, t_n_m_1]
-        print('calculating bp')
+        # print('calculating bp')
         for ind, k in enumerate(reversed(range(1, len(sentence) - 1))):
             append_idx = self.bp_tables[k + 2, res_numbers[ind + 1], res_numbers[ind]]
             res_numbers.append(append_idx)
