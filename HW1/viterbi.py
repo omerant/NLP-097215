@@ -75,12 +75,7 @@ class Viterbi:
         return tag_set
 
     @timeit
-    def predict(self, sentence):
-        self.pi_tables = np.full(shape=(len(sentence) + 1, len(self.tags_set), len(self.tags_set)), fill_value=-np.inf)
-        self.pi_tables[0, self.tag_to_index["*"], self.tag_to_index["*"]] = 0.
-        self.bp_tables = np.full(shape=self.pi_tables.shape, fill_value=10**2, dtype=np.int)
-
-        # print('calculating prob_dict')
+    def fill_prob_dict_from_sentence(self, sentence):
         for idx, hist in enumerate(sentence):
             if idx == 0:
                 pptag_set = {'*'}
@@ -112,6 +107,8 @@ class Viterbi:
                         if not self.prob_dict.get(hist, None):
                             self.prob_dict[hist] = self.exp_dict[hist] / norm_i
 
+    @timeit
+    def calc_res_tags(self, sentence):
         # print('calculating pi')
         for ind, k in enumerate(range(1, len(sentence) + 1)):
             cur_hist = sentence[ind]
@@ -157,6 +154,14 @@ class Viterbi:
 
         return res_tags
 
+    @timeit
+    def predict(self, sentence):
+        self.pi_tables = np.full(shape=(len(sentence) + 1, len(self.tags_set), len(self.tags_set)), fill_value=-np.inf)
+        self.pi_tables[0, self.tag_to_index["*"], self.tag_to_index["*"]] = 0.
+        self.bp_tables = np.full(shape=self.pi_tables.shape, fill_value=10**2, dtype=np.int)
+        self.fill_prob_dict_from_sentence(sentence)
+        res_tags = self.calc_res_tags(sentence)
+        return res_tags
 
 class ResultsHandler:
     def __init__(self, all_tagged_res_list=None, all_gt_tags=None, all_res_tags=None):

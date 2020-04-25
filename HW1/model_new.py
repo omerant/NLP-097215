@@ -167,7 +167,7 @@ if __name__ == '__main__':
     # RUN VITERBI
     v = MaximumEntropyMarkovModel.load_v_from_pickle(dump_weights_path='weights', version=1)
     train1_path = 'data/train1.wtag'
-    test1_path = 'data/test1.wtag'
+    test1_path = 'data/test1_short.wtag'
     ft_statistics = FeatureStatistics(input_file_path=train1_path)
     ft_statistics.pre_process(fill_possible_tag_dict=False)
     test_sentence_hist_list = FeatureStatistics.fill_ordered_history_list(file_path=test1_path)
