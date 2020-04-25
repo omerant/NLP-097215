@@ -5,12 +5,12 @@ from pre_processing import FeatureStatistics
 from features import History
 from scipy.optimize import fmin_l_bfgs_b
 from utils import timeit
-from viterbi import Viterbi
+np.seterr(all='raise')
 
 
 class MaximumEntropyMarkovModel:
-    def __init__(self, train_data_path):
-        self.feature_statistics = FeatureStatistics(train_data_path)
+    def __init__(self, train_data_path, threshold):
+        self.feature_statistics = FeatureStatistics(train_data_path, threshold)
         self.feature_statistics.pre_process(False)
         self.dump_weights_path = 'weights'
         self.prob_dict = dict()
@@ -22,17 +22,6 @@ class MaximumEntropyMarkovModel:
         with open(weights_dir, 'rb') as f:
             v = pickle.load(f).reshape(-1)
         return v
-
-    def fill_prob_dict(self):
-        print('filling probability dict')
-        tag_set = self.feature_statistics.tags_set - {'*'}
-        _, prob_dict = self.calc_normalization_term_exp_dict_prob_dict(self.v,
-                                                                       self.feature_statistics.all_possible_tags_dict,
-                                                                       self.feature_statistics.history_ordered_list,
-                                                                       tag_set
-                                                        )
-        self.prob_dict = prob_dict
-        print('finished filling probability dict')
 
     def load_prob_dict(self):
         print('loading probability dict')
@@ -71,22 +60,42 @@ class MaximumEntropyMarkovModel:
                     tag_set = word_to_tags_set_dict[hist.cword]
 
                 # fill exp dict
+                dot_prod = None
                 for tag in tag_set:
                     n_hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag,
                                      nword=hist.nword, pword=hist.pword, ctag=tag)
 
                     if not exp_dict.get(n_hist, None):
                         dot_prod = np.sum(v[all_possible_hist_feature_dict[n_hist]])
-                        exp_dict[n_hist] = np.exp(dot_prod)
+                        try:
+                            exp_dict[n_hist] = np.exp(dot_prod).astype(np.float64)
+                        except:
+                            break
                         cur_possible_hist_list.append(n_hist)
 
                     norm_i += exp_dict[n_hist]
                 # fill prob_dict
-                for hist in cur_possible_hist_list:
-                    prob_dict[hist] = exp_dict[hist] / norm_i
+                for idx, hist in enumerate(cur_possible_hist_list):
+                    if len(cur_possible_hist_list) == 1:
+                        prob_dict[hist] = 1
+                    else:
+                        prob_dict[hist] = exp_dict[hist] / norm_i
+                    # try:
+                    #     prob_dict[hist] = exp_dict[hist] / norm_i
+                    # except:
+                    #     print(f'num of histories in list: {len(cur_possible_hist_list)}')
+                    #     print(f'exp_dict[hist]: {exp_dict[hist]}')
+                    #     print(f'norm_i: {norm_i}')
+                    #     prob_dict[hist] = 1
 
                 # update normzliaztion term
-                norm_term += np.log(norm_i)
+                if len(cur_possible_hist_list) == 1:
+                    norm_term += dot_prod
+                else:
+                    if np.isclose(norm_i, 0.):
+                        pass
+                    else:
+                        norm_term += np.log(norm_i)
 
         return norm_term, prob_dict
 
@@ -145,7 +154,7 @@ class MaximumEntropyMarkovModel:
         args_5 = self.feature_statistics.word_possible_tag_set
         args_6 = self.feature_statistics.word_possible_tag_with_threshold_dict
         args = (arg_1, arg_2, args_3, args_4, args_5, args_6)
-        w_0 = np.random.normal(0, 0.01, (self.feature_statistics.num_features))
+        w_0 = np.random.normal(0, 0.01, (self.feature_statistics.num_features)).astype(np.float64)
         # w_0 = np.zeros(self.feature_statistics.num_features, dtype=np.float32)
         optimal_params = fmin_l_bfgs_b(func=self.calc_objective_per_iter, x0=w_0, args=args, maxiter=10000, iprint=1)
         weights = optimal_params[0]
@@ -159,40 +168,36 @@ class MaximumEntropyMarkovModel:
 
 if __name__ == '__main__':
     # TRAIN MODEL
-    # train1_path = 'data/train1.wtag'
-    # # test1_short_path = 'data/test1.wtag'
-    # memm = MaximumEntropyMarkovModel(train_data_path=train1_path)
-    # memm.optimize_model()
-
-    # RUN VITERBI
-    v = MaximumEntropyMarkovModel.load_v_from_pickle(dump_weights_path='weights', version=1)
     train1_path = 'data/train1.wtag'
-    test1_path = 'data/test1_short.wtag'
-    ft_statistics = FeatureStatistics(input_file_path=train1_path)
-    ft_statistics.pre_process(fill_possible_tag_dict=False)
-    test_sentence_hist_list = FeatureStatistics.fill_ordered_history_list(file_path=test1_path)
-    tag_set = ft_statistics.tags_set
-    all_possible_tags_dict = ft_statistics.all_possible_tags_dict
-    get_ft_from_hist_func = ft_statistics.get_non_zero_sparse_feature_vec_indices_from_history
-    word_possible_tag_set = ft_statistics.word_possible_tag_set
-    word_possible_tag_with_threshold_dict = ft_statistics.word_possible_tag_with_threshold_dict
+    # test1_short_path = 'data/test1.wtag'
+    memm = MaximumEntropyMarkovModel(train_data_path=train1_path, threshold=10)
+    memm.optimize_model()
 
-    _, prob_dict = MaximumEntropyMarkovModel.calc_normalization_term_exp_dict_prob_dict(
-        v=v, all_possible_hist_feature_dict=all_possible_tags_dict,
-        sentence_history_list=ft_statistics.history_sentence_list, word_to_tags_set_dict=word_possible_tag_set,
-        word_to_most_probable_tag_set=word_possible_tag_with_threshold_dict
-    )
-
-
-    viterbi = Viterbi(
-        v=v, sentence_hist_list=test_sentence_hist_list, tags_set=tag_set,
-        all_possible_tags_dict=all_possible_tags_dict, get_feature_from_hist=get_ft_from_hist_func,
-        word_possible_tag_set=word_possible_tag_set,
-        word_possible_tag_with_threshold_dict=word_possible_tag_with_threshold_dict,
-        prob_dict=prob_dict
-    )
-    viterbi.predict_all_test()
-    # all_res_list, all_acc_list = viterbi.predict_all()
-    # # print(f'avg acc: {sum(all_acc_list)/len(all_acc_list)}')
-    # stop = timeit.default_timer()
-    # print(f'execution time: {stop - start}')
+    # # RUN VITERBI
+    # v = MaximumEntropyMarkovModel.load_v_from_pickle(dump_weights_path='weights', version=1)
+    # train1_path = 'data/train1.wtag'
+    # test1_path = 'data/test1.wtag'
+    # ft_statistics = FeatureStatistics(input_file_path=train1_path)
+    # ft_statistics.pre_process(fill_possible_tag_dict=False)
+    # test_sentence_hist_list = FeatureStatistics.fill_ordered_history_list(file_path=test1_path)
+    # tag_set = ft_statistics.tags_set
+    # all_possible_tags_dict = ft_statistics.all_possible_tags_dict
+    # get_ft_from_hist_func = ft_statistics.get_non_zero_sparse_feature_vec_indices_from_history
+    # word_possible_tag_set = ft_statistics.word_possible_tag_set
+    # word_possible_tag_with_threshold_dict = ft_statistics.word_possible_tag_with_threshold_dict
+    #
+    # _, prob_dict = MaximumEntropyMarkovModel.calc_normalization_term_exp_dict_prob_dict(
+    #     v=v, all_possible_hist_feature_dict=all_possible_tags_dict,
+    #     sentence_history_list=ft_statistics.history_sentence_list, word_to_tags_set_dict=word_possible_tag_set,
+    #     word_to_most_probable_tag_set=word_possible_tag_with_threshold_dict
+    # )
+    #
+    #
+    # viterbi = Viterbi(
+    #     v=v, sentence_hist_list=test_sentence_hist_list, tags_set=tag_set,
+    #     all_possible_tags_dict=all_possible_tags_dict, get_feature_from_hist=get_ft_from_hist_func,
+    #     word_possible_tag_set=word_possible_tag_set,
+    #     word_possible_tag_with_threshold_dict=word_possible_tag_with_threshold_dict,
+    #     prob_dict=prob_dict
+    # )
+    # viterbi.predict_all_test()

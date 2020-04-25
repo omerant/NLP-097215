@@ -3,6 +3,8 @@ import pickle
 import os
 from features import History
 from utils import timeit
+from model_new import MaximumEntropyMarkovModel
+from pre_processing import FeatureStatistics
 
 #genrally - t is TAGi-2, u is TAGi-1, v is currentTAG
 #probability func
@@ -80,12 +82,7 @@ class Viterbi:
             if idx == 0:
                 pptag_set = {'*'}
                 ptag_set = {'*'}
-            elif idx == 1:
-                pptag_set = {'*'}
-                ptag_set = self.get_possible_tag_set_from_word(hist.pword)
-            else:
-                pptag_set = self.tags_set - {'*'}
-                ptag_set = self.get_possible_tag_set_from_word(hist.pword)
+
             ctag_set = self.get_possible_tag_set_from_word(hist.cword)
             norm_i = 0.
             cur_possible_hist_list = []
@@ -106,7 +103,8 @@ class Viterbi:
                     for hist in cur_possible_hist_list:
                         if not self.prob_dict.get(hist, None):
                             self.prob_dict[hist] = self.exp_dict[hist] / norm_i
-
+            pptag_set = ptag_set
+            ptag_set = ctag_set
     @timeit
     def calc_res_tags(self, sentence):
         # print('calculating pi')
@@ -115,12 +113,6 @@ class Viterbi:
             if ind == 0:
                 pp_tag_set = {'*'}
                 p_tag_set = {'*'}
-            elif ind == 1:
-                pp_tag_set = {'*'}
-                p_tag_set = self.get_possible_tag_set_from_word(cur_hist.pword)
-            else:
-                pp_tag_set = self.tags_set - {'*'}
-                p_tag_set = self.get_possible_tag_set_from_word(cur_hist.pword)
             cur_tag_set = self.get_possible_tag_set_from_word(cur_hist.cword)
 
             for v in cur_tag_set:
@@ -140,7 +132,8 @@ class Viterbi:
 
                     self.pi_tables[k, self.tag_to_index[u], self.tag_to_index[v]] = max_pi_mul_q_val
                     self.bp_tables[k, self.tag_to_index[u], self.tag_to_index[v]] = max_t_index
-
+            pp_tag_set = p_tag_set
+            p_tag_set = cur_tag_set
         max_ind = np.argmax(self.pi_tables[-1, :, :])
 
         t_n_m_1, t_n = np.unravel_index(max_ind, self.pi_tables[-1, :, :].shape)
@@ -185,6 +178,35 @@ class ResultsHandler:
         with open(dump_path, 'rb') as f:
             self.all_tagged_res_list, self.all_gt_tags, self.all_res_tags = pickle.load(f)
 
-res_handler = ResultsHandler()
-res_handler.get_res()
-pass
+# res_handler = ResultsHandler()
+# res_handler.get_res()
+# pass
+
+# RUN VITERBI
+v = MaximumEntropyMarkovModel.load_v_from_pickle(dump_weights_path='weights', version=1)
+train1_path = 'data/train1.wtag'
+test1_path = 'data/test1.wtag'
+ft_statistics = FeatureStatistics(input_file_path=train1_path, threshold=10)
+ft_statistics.pre_process(fill_possible_tag_dict=False)
+test_sentence_hist_list = FeatureStatistics.fill_ordered_history_list(file_path=test1_path)
+tag_set = ft_statistics.tags_set
+all_possible_tags_dict = ft_statistics.all_possible_tags_dict
+get_ft_from_hist_func = ft_statistics.get_non_zero_sparse_feature_vec_indices_from_history
+word_possible_tag_set = ft_statistics.word_possible_tag_set
+word_possible_tag_with_threshold_dict = ft_statistics.word_possible_tag_with_threshold_dict
+
+_, prob_dict = MaximumEntropyMarkovModel.calc_normalization_term_exp_dict_prob_dict(
+    v=v, all_possible_hist_feature_dict=all_possible_tags_dict,
+    sentence_history_list=ft_statistics.history_sentence_list, word_to_tags_set_dict=word_possible_tag_set,
+    word_to_most_probable_tag_set=word_possible_tag_with_threshold_dict
+)
+
+
+viterbi = Viterbi(
+    v=v, sentence_hist_list=test_sentence_hist_list, tags_set=tag_set,
+    all_possible_tags_dict=all_possible_tags_dict, get_feature_from_hist=get_ft_from_hist_func,
+    word_possible_tag_set=word_possible_tag_set,
+    word_possible_tag_with_threshold_dict=word_possible_tag_with_threshold_dict,
+    prob_dict=prob_dict
+)
+viterbi.predict_all_test()

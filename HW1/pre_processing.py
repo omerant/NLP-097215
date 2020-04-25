@@ -260,7 +260,7 @@ class FeatureStatistics:
 
 if __name__ == '__main__':
     train1_path = 'data/train1.wtag'
-    feature_statistics = FeatureStatistics(input_file_path=train1_path)
+    feature_statistics = FeatureStatistics(input_file_path=train1_path, threshold=10)
     feature_statistics.pre_process(fill_possible_tag_dict=True)
     pass
 
