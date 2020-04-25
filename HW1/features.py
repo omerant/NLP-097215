@@ -1,13 +1,12 @@
 from collections import OrderedDict, namedtuple
 from abc import abstractmethod, ABC
-from common_features import common_tags
 import re
 import utils
 
 
 History = namedtuple('History', 'cword, pptag, ptag, ctag, nword, pword')
-Symbols = '[@_!#$%^&*()<>?/\|}{~:,.]'
-
+Symbols = """!#$%&?/\|}{~:;.,'`-]"""
+STR_CHECK_SYMBOL = re.compile(Symbols)
 
 class WordAndTagConstants:
     PTAG_SENTENCE_BEGINNING = '*'
@@ -461,9 +460,9 @@ class ContainsSymbolDict(FeatureDict):
 
     def get_feature_index_and_count_from_history(self, history: History):
         cur_word = history.cword
-        str_check = re.compile(Symbols)
-        if str_check.search(cur_word):
-            return 0, self.dict.get(self.dict_key, 0)
+        for letter in cur_word:
+            if letter in Symbols:
+                return 0, self.dict.get(self.dict_key, 0)
         else:
             return self.INVALID_IDX, self.INVALID_VAL
 

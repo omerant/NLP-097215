@@ -3,6 +3,7 @@ import pickle
 import matplotlib.pyplot as plt
 from collections import OrderedDict
 import time
+import re
 
 
 def get_training_info(weights_path='weights'):
@@ -43,12 +44,6 @@ def timeit(method):
         return result
     return timed
 
+
 def is_number(s):
-    try:
-        float(s)
-        return True
-    except ValueError:
-        for letter in s:
-            if not letter.isdigit() and letter != ',':
-                return False
-        return True
+    return bool(re.match(r'^-?\d+(?:\,\d+)?$', s)) or bool(re.match(r'^-?\d+(?:\.\d+)?$', s))

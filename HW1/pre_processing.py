@@ -257,9 +257,9 @@ class FeatureStatistics:
     # def pre_process_test(self, ):
 
 
-# if __name__ == '__main__':
-#     train1_path = 'data/train1_short.wtag'
-#     feature_statistics = FeatureStatistics(input_file_path=train1_path)
-#     feature_statistics.pre_process(fill_possible_tag_dict=True)
-#     pass
+if __name__ == '__main__':
+    train1_path = 'data/train1.wtag'
+    feature_statistics = FeatureStatistics(input_file_path=train1_path)
+    feature_statistics.pre_process(fill_possible_tag_dict=True)
+    pass
 

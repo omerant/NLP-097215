@@ -12,7 +12,7 @@ from utils import timeit
 
 class Viterbi:
     def __init__(self, v, sentence_hist_list: [[History]], tags_set, all_possible_tags_dict,
-                 get_feature_from_hist, word_possible_tag_set, word_possible_tag_with_threshold_dict, prob_dict=dict()):
+                 get_feature_from_hist, word_possible_tag_set, word_possible_tag_with_threshold_dict, prob_dict):
         self.v = v
         self.sentence_list = sentence_hist_list
         tags_set.add('*')
@@ -163,6 +163,7 @@ class Viterbi:
         res_tags = self.calc_res_tags(sentence)
         return res_tags
 
+
 class ResultsHandler:
     def __init__(self, all_tagged_res_list=None, all_gt_tags=None, all_res_tags=None):
         self.res_path = 'res'
@@ -184,6 +185,6 @@ class ResultsHandler:
         with open(dump_path, 'rb') as f:
             self.all_tagged_res_list, self.all_gt_tags, self.all_res_tags = pickle.load(f)
 
-# res_handler = ResultsHandler()
-# res_handler.get_res()
-# pass
+res_handler = ResultsHandler()
+res_handler.get_res()
+pass
