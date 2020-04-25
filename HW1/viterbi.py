@@ -10,12 +10,16 @@ from features import History
 
 
 class Viterbi:
-    def __init__(self, v, sentence_hist_list: [[History]], tags_set, all_possible_tags_dict, get_feature_from_hist):
+    def __init__(self, v, sentence_hist_list: [[History]], tags_set, all_possible_tags_dict,
+                 get_feature_from_hist, word_possible_tag_set, word_possible_tag_with_threshold_dict):
         self.v = v
         self.sentence_list = sentence_hist_list
+        tags_set.add('*')
         self.tags_set = tags_set
         self.all_possible_tags_dict = all_possible_tags_dict
         self.get_feature_from_hist = get_feature_from_hist
+        self.word_possible_tag_set = word_possible_tag_set
+        self.word_possible_tag_with_threshold_dict = word_possible_tag_with_threshold_dict
         tag_list = list(tags_set)
         self.tag_to_index = {tag_list[i]: i for i in range(len(tag_list))}
         self.index_to_tag = {v: k for k, v in self.tag_to_index.items()}
@@ -24,13 +28,15 @@ class Viterbi:
         self.prob_dict = dict()
         self.exp_dict = dict()
 
-    def predict_all(self):
+    def predict_all_test(self):
         print('starting inference')
         all_res_tags = []
         all_acc_list = []
         all_tagged_res_list = []# will be saved to file
         all_gt_tags = []
         for num, sentence in enumerate(self.sentence_list):
+            if num + 1 % 10 == 0:
+                print(f'handling sentence number {num+1}')
             cur_res = self.predict(sentence)
             all_res_tags.append(cur_res)
             ground_truth = [hist.ctag for hist in sentence]
@@ -57,21 +63,39 @@ class Viterbi:
         acc = (sum(right_tag_list)/len(right_tag_list)) * 100
         return acc
 
+    def get_possible_tag_set_from_word(self, word):
+        if self.word_possible_tag_with_threshold_dict.get(word, None):
+            tag_set = self.word_possible_tag_with_threshold_dict[word][0]
+        elif self.word_possible_tag_set.get(word, None):
+            tag_set = self.word_possible_tag_set[word]
+        else:  # this is a new word
+            tag_set = self.tags_set
+
+        return tag_set
+
     def predict(self, sentence):
         self.pi_tables = np.full(shape=(len(sentence) + 1, len(self.tags_set), len(self.tags_set)), fill_value=0.)
         self.pi_tables[0, self.tag_to_index["*"], self.tag_to_index["*"]] = 1
         self.bp_tables = np.full(shape=self.pi_tables.shape, fill_value=10**20)
 
-        # print('calculating prob_dict')
-
-        for hist in sentence:
-            # print(f'cword = {hist.cword}')
+        print('calculating prob_dict')
+        for idx, hist in enumerate(sentence):
             norm_i = 0.
             cur_possible_hist_list = []
-            # fill exp dict
-            for pptag in self.tags_set:
-                for ptag in self.tags_set:
-                    for c_tag in self.tags_set:
+            if idx == 0:
+                pptag_set = {'*'}
+                ptag_set = {'*'}
+            elif idx == 1:
+                pptag_set = {'*'}
+                ptag_set = self.get_possible_tag_set_from_word(hist.pword)
+            else:
+                pptag_set = self.tags_set
+                ptag_set = self.get_possible_tag_set_from_word(hist.pword)
+            ctag_set = self.get_possible_tag_set_from_word(hist.cword)
+
+            for pptag in pptag_set:
+                for ptag in ptag_set:
+                    for c_tag in ctag_set:
                         n_hist = History(cword=hist.cword, pptag=pptag, ptag=ptag,
                                          nword=hist.nword, pword=hist.pword, ctag=c_tag)
                         if not self.exp_dict.get(n_hist, None):
@@ -86,15 +110,14 @@ class Viterbi:
                     for hist in cur_possible_hist_list:
                         self.prob_dict[hist] = self.exp_dict[hist] / norm_i
 
-        # print('calculating pi and bp')
-
+        print('calculating pi')
         for ind, k in enumerate(range(1, len(sentence) + 1)):
 
             # print(f'k: {k}, curr_hist: {cur_hist}')
             cur_hist = sentence[ind]
-            cur_tag_set = self.tags_set - {'*'}
-            p_tag_set = self.tags_set - {'*'} if k > 1 else {'*'}
-            pp_tag_set = self.tags_set - {'*'} if k > 2 else {'*'}
+            cur_tag_set = self.get_possible_tag_set_from_word(cur_hist.cword)
+            p_tag_set = self.get_possible_tag_set_from_word(cur_hist.pword) if k > 1 else {'*'}
+            pp_tag_set = self.tags_set if k > 2 else {'*'}
             for v in cur_tag_set:
                 for u in p_tag_set:
                     max_pi_mul_q_val = 0.
@@ -117,7 +140,7 @@ class Viterbi:
 
         t_n_m_1, t_n = np.unravel_index(max_ind, self.pi_tables[-1, :, :].shape)
         res_numbers = [t_n, t_n_m_1]
-
+        print('calculating bp')
         for ind, k in enumerate(reversed(range(1, len(sentence) - 1))):
             # print(f'ind: {ind}, k: {k}')
             append_idx = self.bp_tables[k + 2, res_numbers[ind], res_numbers[ind + 1]]
@@ -126,8 +149,6 @@ class Viterbi:
             res_numbers.append(append_idx)
 
         res_tags = list(reversed([self.index_to_tag[res] for res in res_numbers]))
-
-        # print(res_tags)
 
         return res_tags
 
