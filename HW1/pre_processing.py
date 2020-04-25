@@ -57,6 +57,7 @@ class FeatureStatistics:
         self.fd_is_lat_word = ft.IsLastWordDict()
         # symbols
         self.fd_has_symbol = ft.ContainsSymbolDict()
+        self.fd_all_symbol = ft.ContainsOnlySymbolsDict()
 
         #word length
         for i in range(1,14):

@@ -454,9 +454,9 @@ class ContainsSymbolDict(FeatureDict):
         for sentence in hist_sentence_list:
             for hist in sentence:
                 cur_word = hist.cword
-                str_check = re.compile(Symbols)
-                if str_check.search(cur_word):
-                    self.insert_key(self.dict_key)
+                for letter in cur_word:
+                    if letter in Symbols:
+                        self.insert_key(self.dict_key)
 
     def get_feature_index_and_count_from_history(self, history: History):
         cur_word = history.cword
@@ -465,6 +465,34 @@ class ContainsSymbolDict(FeatureDict):
                 return 0, self.dict.get(self.dict_key, 0)
         else:
             return self.INVALID_IDX, self.INVALID_VAL
+
+
+class ContainsOnlySymbolsDict(FeatureDict):
+    def __init__(self):
+        super().__init__()
+        self.dict_key = 'contains_symbol'
+
+    def fill_dict(self, hist_sentence_list: [[History]]):
+        """
+            Check if the word contains a symbol
+        """
+        for sentence in hist_sentence_list:
+            for hist in sentence:
+                cur_word = hist.cword
+                all_symbols = True
+                for letter in cur_word:
+                    if letter not in Symbols:
+                        all_symbols = False
+                if all_symbols:
+                    self.insert_key(self.dict_key)
+
+    def get_feature_index_and_count_from_history(self, history: History):
+        cur_word = history.cword
+        for letter in cur_word:
+            if letter not in Symbols:
+                return self.INVALID_IDX, self.INVALID_VAL
+
+        return 0, self.dict.get(self.dict_key, 0)
 
 
 class WordsLengthDict(FeatureDict):
