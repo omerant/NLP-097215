@@ -11,7 +11,7 @@ from features import History
 
 class Viterbi:
     def __init__(self, v, sentence_hist_list: [[History]], tags_set, all_possible_tags_dict,
-                 get_feature_from_hist, word_possible_tag_set, word_possible_tag_with_threshold_dict):
+                 get_feature_from_hist, word_possible_tag_set, word_possible_tag_with_threshold_dict, prob_dict=dict()):
         self.v = v
         self.sentence_list = sentence_hist_list
         tags_set.add('*')
@@ -25,7 +25,7 @@ class Viterbi:
         self.index_to_tag = {v: k for k, v in self.tag_to_index.items()}
         self.pi_tables = None
         self.bp_tables = None
-        self.prob_dict = dict()
+        self.prob_dict = prob_dict
         self.exp_dict = dict()
 
     def predict_all_test(self):
@@ -65,7 +65,7 @@ class Viterbi:
 
     def get_possible_tag_set_from_word(self, word):
         if self.word_possible_tag_with_threshold_dict.get(word, None):
-            tag_set = self.word_possible_tag_with_threshold_dict[word][0]
+            tag_set = {self.word_possible_tag_with_threshold_dict[word][0]}
         elif self.word_possible_tag_set.get(word, None):
             tag_set = self.word_possible_tag_set[word]
         else:  # this is a new word
@@ -76,12 +76,11 @@ class Viterbi:
     def predict(self, sentence):
         self.pi_tables = np.full(shape=(len(sentence) + 1, len(self.tags_set), len(self.tags_set)), fill_value=0.)
         self.pi_tables[0, self.tag_to_index["*"], self.tag_to_index["*"]] = 1
-        self.bp_tables = np.full(shape=self.pi_tables.shape, fill_value=10**20)
+        self.bp_tables = np.full(shape=self.pi_tables.shape, fill_value=10**2, dtype=np.int)
 
         print('calculating prob_dict')
         for idx, hist in enumerate(sentence):
-            norm_i = 0.
-            cur_possible_hist_list = []
+            print(f'calculating prob for {hist.cword}')
             if idx == 0:
                 pptag_set = {'*'}
                 ptag_set = {'*'}
@@ -89,35 +88,44 @@ class Viterbi:
                 pptag_set = {'*'}
                 ptag_set = self.get_possible_tag_set_from_word(hist.pword)
             else:
-                pptag_set = self.tags_set
+                pptag_set = self.tags_set - {'*'}
                 ptag_set = self.get_possible_tag_set_from_word(hist.pword)
             ctag_set = self.get_possible_tag_set_from_word(hist.cword)
-
+            norm_i = 0.
+            cur_possible_hist_list = []
             for pptag in pptag_set:
                 for ptag in ptag_set:
                     for c_tag in ctag_set:
                         n_hist = History(cword=hist.cword, pptag=pptag, ptag=ptag,
                                          nword=hist.nword, pword=hist.pword, ctag=c_tag)
-                        if not self.exp_dict.get(n_hist, None):
+                        if not self.prob_dict.get(n_hist, None):
+                            # if not self.exp_dict.get(n_hist, None):
                             if not self.all_possible_tags_dict.get(n_hist, None):
                                 self.all_possible_tags_dict[n_hist] = self.get_feature_from_hist(n_hist)
                             dot_prod = np.sum(self.v[self.all_possible_tags_dict[n_hist]])
                             self.exp_dict[n_hist] = np.exp(dot_prod)
                             cur_possible_hist_list.append(n_hist)
+                            norm_i += self.exp_dict[n_hist]
 
-                        norm_i += self.exp_dict[n_hist]
                     # fill prob_dict
                     for hist in cur_possible_hist_list:
-                        self.prob_dict[hist] = self.exp_dict[hist] / norm_i
+                        if not self.prob_dict.get(hist, None):
+                            self.prob_dict[hist] = self.exp_dict[hist] / norm_i
 
         print('calculating pi')
-        for ind, k in enumerate(range(1, len(sentence) + 1)):
-
-            # print(f'k: {k}, curr_hist: {cur_hist}')
+        for ind, k in enumerate(range(1, len(sentence))):
             cur_hist = sentence[ind]
+            if ind == 0:
+                pp_tag_set = {'*'}
+                p_tag_set = {'*'}
+            elif ind == 1:
+                pp_tag_set = {'*'}
+                p_tag_set = self.get_possible_tag_set_from_word(cur_hist.pword)
+            else:
+                pp_tag_set = self.tags_set - {'*'}
+                p_tag_set = self.get_possible_tag_set_from_word(cur_hist.pword)
             cur_tag_set = self.get_possible_tag_set_from_word(cur_hist.cword)
-            p_tag_set = self.get_possible_tag_set_from_word(cur_hist.pword) if k > 1 else {'*'}
-            pp_tag_set = self.tags_set if k > 2 else {'*'}
+
             for v in cur_tag_set:
                 for u in p_tag_set:
                     max_pi_mul_q_val = 0.
@@ -144,11 +152,8 @@ class Viterbi:
         t_n_m_1, t_n = np.unravel_index(max_ind, self.pi_tables[-1, :, :].shape)
         res_numbers = [t_n, t_n_m_1]
         print('calculating bp')
-        for ind, k in enumerate(reversed(range(1, len(sentence) - 1))):
-            # print(f'ind: {ind}, k: {k}')
-            append_idx = self.bp_tables[k + 2, res_numbers[ind], res_numbers[ind + 1]]
-            # print(f'append index: {append_idx}')
-            # print(f'index in bp table: {k + 2}')
+        for ind, k in enumerate(reversed(range(1, len(sentence)))):
+            append_idx = self.bp_tables[k + 1, res_numbers[ind], res_numbers[ind + 1]]
             res_numbers.append(append_idx)
 
         res_tags = list(reversed([self.index_to_tag[res] for res in res_numbers]))

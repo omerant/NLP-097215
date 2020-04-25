@@ -159,33 +159,40 @@ class MaximumEntropyMarkovModel:
 
 if __name__ == '__main__':
     # TRAIN MODEL
-    train1_path = 'data/train1.wtag'
-    # test1_short_path = 'data/test1.wtag'
-    memm = MaximumEntropyMarkovModel(train_data_path=train1_path)
-    memm.optimize_model()
-
-    # # RUN VITERBI
-    # v = MaximumEntropyMarkovModel.load_v_from_pickle(dump_weights_path='weights', version=1)
     # train1_path = 'data/train1.wtag'
-    # test1_path = 'data/test1.wtag'
-    # ft_statistics = FeatureStatistics(input_file_path=train1_path)
-    # ft_statistics.pre_process(fill_possible_tag_dict=False)
-    # test_sentence_hist_list = FeatureStatistics.fill_ordered_history_list(file_path=test1_path)
-    # tag_set = ft_statistics.tags_set
-    # all_possible_tags_dict = ft_statistics.all_possible_tags_dict
-    # get_ft_from_hist_func = ft_statistics.get_non_zero_sparse_feature_vec_indices_from_history
-    # word_possible_tag_set = ft_statistics.word_possible_tag_set
-    # word_possible_tag_with_threshold_dict = ft_statistics.word_possible_tag_with_threshold_dict
-    #
-    # viterbi = Viterbi(
-    #     v=v, sentence_hist_list=test_sentence_hist_list, tags_set=tag_set,
-    #     all_possible_tags_dict=all_possible_tags_dict, get_feature_from_hist=get_ft_from_hist_func,
-    #     word_possible_tag_set=word_possible_tag_set,
-    #     word_possible_tag_with_threshold_dict=word_possible_tag_with_threshold_dict
-    # )
-    # viterbi.predict_all_test()
-    # # all_res_list, all_acc_list = viterbi.predict_all()
-    # # # print(f'avg acc: {sum(all_acc_list)/len(all_acc_list)}')
-    # # stop = timeit.default_timer()
-    # # print(f'execution time: {stop - start}')
-# KeyError: History(cword='Treasury', pptag='*', ptag='DT', ctag='N', nword='is', pword='The')
+    # # test1_short_path = 'data/test1.wtag'
+    # memm = MaximumEntropyMarkovModel(train_data_path=train1_path)
+    # memm.optimize_model()
+
+    # RUN VITERBI
+    v = MaximumEntropyMarkovModel.load_v_from_pickle(dump_weights_path='weights', version=1)
+    train1_path = 'data/train1.wtag'
+    test1_path = 'data/test1_short.wtag'
+    ft_statistics = FeatureStatistics(input_file_path=train1_path)
+    ft_statistics.pre_process(fill_possible_tag_dict=False)
+    test_sentence_hist_list = FeatureStatistics.fill_ordered_history_list(file_path=test1_path)
+    tag_set = ft_statistics.tags_set
+    all_possible_tags_dict = ft_statistics.all_possible_tags_dict
+    get_ft_from_hist_func = ft_statistics.get_non_zero_sparse_feature_vec_indices_from_history
+    word_possible_tag_set = ft_statistics.word_possible_tag_set
+    word_possible_tag_with_threshold_dict = ft_statistics.word_possible_tag_with_threshold_dict
+
+    _, prob_dict = MaximumEntropyMarkovModel.calc_normalization_term_exp_dict_prob_dict(
+        v=v, all_possible_hist_feature_dict=all_possible_tags_dict,
+        sentence_history_list=ft_statistics.history_sentence_list, word_to_tags_set_dict=word_possible_tag_set,
+        word_to_most_probable_tag_set=word_possible_tag_with_threshold_dict
+    )
+
+
+    viterbi = Viterbi(
+        v=v, sentence_hist_list=test_sentence_hist_list, tags_set=tag_set,
+        all_possible_tags_dict=all_possible_tags_dict, get_feature_from_hist=get_ft_from_hist_func,
+        word_possible_tag_set=word_possible_tag_set,
+        word_possible_tag_with_threshold_dict=word_possible_tag_with_threshold_dict,
+        prob_dict=prob_dict
+    )
+    viterbi.predict_all_test()
+    # all_res_list, all_acc_list = viterbi.predict_all()
+    # # print(f'avg acc: {sum(all_acc_list)/len(all_acc_list)}')
+    # stop = timeit.default_timer()
+    # print(f'execution time: {stop - start}')
