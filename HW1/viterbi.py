@@ -69,7 +69,7 @@ class Viterbi:
         elif self.word_possible_tag_set.get(word, None):
             tag_set = self.word_possible_tag_set[word]
         else:  # this is a new word
-            tag_set = self.tags_set
+            tag_set = self.tags_set - {'*'}
 
         return tag_set
 
@@ -132,7 +132,10 @@ class Viterbi:
                         if res > max_pi_mul_q_val:
                             max_pi_mul_q_val = res
                             max_t_index = t_index
-
+                    print(f'tag to index u {u}')
+                    print(f'{self.tag_to_index[u]}')
+                    print(f'tag to index u {v}')
+                    print(f'{self.tag_to_index[v]}')
                     self.pi_tables[k, self.tag_to_index[u], self.tag_to_index[v]] = max_pi_mul_q_val
                     self.bp_tables[k, self.tag_to_index[u], self.tag_to_index[v]] = max_t_index
 
