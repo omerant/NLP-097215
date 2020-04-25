@@ -12,7 +12,7 @@ from utils import timeit
 class FeatureStatistics:
     def __init__(self, input_file_path, threshold=3):
         self.file_path = input_file_path
-        self.history_sentence_list = self.fill_ordered_history_list()
+        self.history_sentence_list = self.fill_ordered_history_list(self.file_path)
         self.num_sentences = len(self.history_sentence_list)
         self.tags_set = self.fill_tags_set()
         self.word_possible_tag_dict = self.fill_word_possible_tag_dict()
@@ -62,9 +62,9 @@ class FeatureStatistics:
         for i in range(1,14):
             setattr(self, 'fd_word_length'+str(i), ft.WordsLengthDict(i))
 
-    @timeit
-    def fill_ordered_history_list(self):
-        with open(self.file_path) as f:
+    @staticmethod
+    def fill_ordered_history_list(file_path):
+        with open(file_path) as f:
             hist_sentence_list = []
             for idx, line in enumerate(f):
                 splited_words = split(' |,\n', line[:-1])  # remove \n from last part of sentence
@@ -254,10 +254,12 @@ class FeatureStatistics:
             dump_path = hist_ft_dict_path
             self.load_all_possible_tags_dict(path=dump_path)
 
+    # def pre_process_test(self, ):
 
-if __name__ == '__main__':
-    train1_path = 'data/train1_short.wtag'
-    feature_statistics = FeatureStatistics(input_file_path=train1_path)
-    feature_statistics.pre_process(fill_possible_tag_dict=True)
-    pass
+
+# if __name__ == '__main__':
+#     train1_path = 'data/train1_short.wtag'
+#     feature_statistics = FeatureStatistics(input_file_path=train1_path)
+#     feature_statistics.pre_process(fill_possible_tag_dict=True)
+#     pass
 
