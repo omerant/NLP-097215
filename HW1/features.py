@@ -3,7 +3,6 @@ from abc import abstractmethod, ABC
 from common_features import common_tags
 import re
 import utils
-from constant_tag_word_sets import WordConstantTagSets
 
 
 History = namedtuple('History', 'cword, pptag, ptag, ctag, nword, pword')
