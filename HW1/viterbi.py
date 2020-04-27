@@ -30,6 +30,8 @@ class Viterbi:
         self.bp_tables = None
         self.prob_dict = prob_dict
         self.exp_dict = dict()
+        self.res_path = 'res'
+        self.dump_name = 'test1'
 
     def predict_all_test(self):
         print('starting inference')
@@ -37,6 +39,7 @@ class Viterbi:
         all_acc_list = []
         all_tagged_res_list = []# will be saved to file
         all_gt_tags = []
+        all_right_tag_list=[]
         for num, sentence in enumerate(self.sentence_list):
             if num + 1 % 10 == 0:
                 print(f'handling sentence number {num+1}')
@@ -45,26 +48,28 @@ class Viterbi:
             ground_truth = [hist.ctag for hist in sentence]
             all_gt_tags.append(ground_truth)
 
-            res_acc = self.calc_accuracy(cur_res, ground_truth)
+            res_acc, right_tag_list = self.calc_accuracy(cur_res, ground_truth)
             print(f'accuracy for sentence {num+1}: {res_acc}')
             all_acc_list.append(res_acc)
+            all_right_tag_list += right_tag_list
             cur_tagged_res = []
             for hist, tag in zip(sentence, cur_res):
                 cword = hist.cword
                 cur_tagged_res.append(cword + '_' + tag)
             all_tagged_res_list.append(cur_tagged_res)
+
             assert len(cur_res) == len(sentence)
         # print(all_tagged_res_list)
-        print(f'total accuracy: {sum(all_acc_list)/len(all_acc_list)}')
-        res_handler = ResultsHandler(all_tagged_res_list, all_gt_tags, all_res_tags)
-        res_handler.dump_res()
+        # print(f'total accuracy: {sum(all_acc_list)/len(all_acc_list)}')
+        print(f'total accuracy: {sum(all_right_tag_list) / len(all_right_tag_list) * 100}')
+        self.dump_res(all_tagged_res_list, all_gt_tags, all_res_tags)
         return all_res_tags, all_acc_list
 
     @staticmethod
     def calc_accuracy(res, gt):
         right_tag_list = [1 if res_tag == true_tag else 0 for res_tag, true_tag in zip(res, gt)]
         acc = (sum(right_tag_list)/len(right_tag_list)) * 100
-        return acc
+        return acc, right_tag_list
 
     def get_possible_tag_set_from_word(self, word):
         if self.word_possible_tag_with_threshold_dict.get(word, None):
@@ -156,27 +161,14 @@ class Viterbi:
         res_tags = self.calc_res_tags(sentence)
         return res_tags
 
-
-class ResultsHandler:
-    def __init__(self, all_tagged_res_list=None, all_gt_tags=None, all_res_tags=None):
-        self.res_path = 'res'
-        self.dump_name = 'test1'
-        self.all_tagged_res_list = all_tagged_res_list
-        self.all_gt_tags = all_gt_tags
-        self.all_res_tags = all_res_tags
-
-    def dump_res(self):
+    def dump_res(self, all_tagged_res_list, all_gt_tags, all_res_tags):
         if not os.path.isdir(self.res_path):
             os.makedirs(self.res_path)
         dump_path = os.path.join(self.res_path, self.dump_name)
         with open(dump_path, 'wb') as f:
-            res = (self.all_tagged_res_list, self.all_gt_tags, self.all_res_tags)
+            res = (all_tagged_res_list, all_gt_tags, all_res_tags)
             pickle.dump(res, f)
 
-    def get_res(self):
-        dump_path = os.path.join(self.res_path, self.dump_name)
-        with open(dump_path, 'rb') as f:
-            self.all_tagged_res_list, self.all_gt_tags, self.all_res_tags = pickle.load(f)
 
 # res_handler = ResultsHandler()
 # res_handler.get_res()
