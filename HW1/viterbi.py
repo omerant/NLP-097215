@@ -47,7 +47,6 @@ class Viterbi:
             all_res_tags.append(cur_res)
             ground_truth = [hist.ctag for hist in sentence]
             all_gt_tags.append(ground_truth)
-
             res_acc, right_tag_list = self.calc_accuracy(cur_res, ground_truth)
             print(f'accuracy for sentence {num+1}: {res_acc}')
             all_acc_list.append(res_acc)
@@ -149,7 +148,6 @@ class Viterbi:
             res_numbers.append(append_idx)
 
         res_tags = list(reversed([self.index_to_tag[res] for res in res_numbers]))
-
         return res_tags
 
     @timeit

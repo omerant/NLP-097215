@@ -7,6 +7,7 @@ from sklearn.preprocessing import MultiLabelBinarizer
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sn
+from re import split
 
 class ResultsHandler:
     def __init__(self):
@@ -25,10 +26,20 @@ class ResultsHandler:
         self.y_pred = [label for sentence in self.all_res_tags for label in sentence]
         self.all_labels = list(dict.fromkeys(self.y_pred))
         self.idx_to_labels = {idx: label for idx,label in enumerate(self.all_labels)}
-
+        dollar, wrong, missed =0,0,0
+        for true,pred in zip(self.y_true, self.y_pred):
+            if pred == 'JJ':
+                dollar+=1
+                if true != 'JJ':
+                    wrong+=1
+            if true == 'JJ' and pred != 'JJ':
+                missed +=1
+        print('all classified as JJ ', dollar)
+        print('worng classified as JJ ', wrong)
+        print('missed JJ ', missed)
 
     def plot_confusion_matrix(self):
-        self.C = confusion_matrix(self.y_true, self.y_pred)
+        self.C = confusion_matrix(self.y_true, self.y_pred, labels=self.all_labels)
         acc = np.trace(self.C) / np.sum(self.C)
         print(acc)
         df_cm = pd.DataFrame(self.C, self.all_labels, self.all_labels)
@@ -55,9 +66,30 @@ class ResultsHandler:
         worst_accs = [(k,v) for k,v in sorted(accs.items(), key=lambda item:item[1])]
         print("worst 5: ", worst_accs[:5])
 
+    def new_words(self):
+        train1_path = 'data/train1.wtag'
+        all_train_words = []
+        with open(train1_path) as f:
+            for idx, line in enumerate(f):
+                splited_words = split(' |,\n', line[:-1]) if line[-1] == '\n' else split(' |,\n', line)  # remove \n from last part of sentence
+                for word_idx in range(len(splited_words)):
+                    cword, ctag = split('_', splited_words[word_idx])
+                    all_train_words.append(cword)
+        test1_path = 'data/test1.wtag'
+        all_test_words = []
+        with open(test1_path) as f:
+            for idx, line in enumerate(f):
+                splited_words = split(' |,\n', line[:-1]) if line[-1] == '\n' else split(' |,\n', line)  # remove \n from last part of sentence
+                for word_idx in range(len(splited_words)):
+                    cword, ctag = split('_', splited_words[word_idx])
+                    all_test_words.append(cword)
+        new_words=[word for word in all_test_words if word not in all_train_words]
+        print(len(new_words))
+
 
 #
 res = ResultsHandler()
+res.new_words()
 res.get_res()
 res.plot_confusion_matrix()
 # res.get_most_mistakes()
