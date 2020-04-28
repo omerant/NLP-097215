@@ -68,7 +68,7 @@ class FeatureStatistics:
         with open(file_path) as f:
             hist_sentence_list = []
             for idx, line in enumerate(f):
-                splited_words = split(' |,\n', line[:-1])  # remove \n from last part of sentence
+                splited_words = split(' |,\n', line[:-1]) if line[-1] == '\n' else split(' |,\n', line)  # remove \n from last part of sentence
                 new_sentence_hist_list = []
                 for word_idx in range(len(splited_words)):
                     cword, ctag = split('_', splited_words[word_idx])
@@ -90,7 +90,6 @@ class FeatureStatistics:
                         nword, _ = split('_', splited_words[word_idx+1])
                     else:
                         nword = WordAndTagConstants.NWORD_SENTENCE_END
-
                     cur_hist = History(cword=cword, pptag=pptag, ptag=ptag, ctag=ctag, nword=nword, pword=pword)
                     new_sentence_hist_list.append(cur_hist)
                 hist_sentence_list.append(new_sentence_hist_list)
@@ -101,7 +100,7 @@ class FeatureStatistics:
         tag_set = set()
         for sentence in self.history_sentence_list:
             for hist in sentence:
-                 tag_set.add(hist.ctag)
+                tag_set.add(hist.ctag)
         return tag_set
 
     def fill_word_possible_tag_dict(self):
