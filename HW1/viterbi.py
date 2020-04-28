@@ -147,7 +147,7 @@ class Viterbi:
             for v in cur_tag_set:
                 for u in p_tag_set:
                     max_pi_mul_q_val = -np.inf
-                    max_t_index = 10**3
+                    max_t_index = self.tag_to_index['NN']#10**3
                     for t in pp_tag_set:
                         t_index = self.tag_to_index[t]
                         new_hist = History(cword=cur_hist.cword, pptag=t, ptag=u,
