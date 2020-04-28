@@ -30,15 +30,12 @@ class FeatureStatistics:
         self.fd_unigram_tags = ft.UnigramTagsCountDict()
         self.fd_word_tag = ft.WordsTagsCountDict()
         # fill dict for each prefix len
-        self.fd_words_prefix1_tags = ft.WordsPrefixTagsCountDict(pref_len=1)
-        self.fd_words_prefix2_tags = ft.WordsPrefixTagsCountDict(pref_len=2)
-        self.fd_words_prefix3_tags = ft.WordsPrefixTagsCountDict(pref_len=3)
-        self.fd_words_prefix4_tags = ft.WordsPrefixTagsCountDict(pref_len=4)
+        for i in range(1, 7):
+            setattr(self, 'fd_words_prefix'+str(i), ft.WordsPrefixTagsCountDict(i))
+
         # fill dict for each suffix len
-        self.fd_words_suffix1_tags = ft.WordsSuffixTagsCountDict(suff_len=1)
-        self.fd_words_suffix2_tags = ft.WordsSuffixTagsCountDict(suff_len=2)
-        self.fd_words_suffix3_tags = ft.WordsSuffixTagsCountDict(suff_len=3)
-        self.fd_words_suffix4_tags = ft.WordsSuffixTagsCountDict(suff_len=4)
+        for i in range(1, 7):
+            setattr(self, 'fd_words_suffix'+str(i), ft.WordsSuffixTagsCountDict(i))
 
         self.fd_pword_ctag = ft.PrevWordCurrTagCountDict()
         self.fd_nword_ctag = ft.NextWordCurrTagCountDict()
