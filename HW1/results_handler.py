@@ -9,6 +9,7 @@ import pandas as pd
 import seaborn as sn
 from re import split
 
+
 class ResultsHandler:
     def __init__(self):
         self.res_path = 'res'

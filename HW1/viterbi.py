@@ -15,7 +15,7 @@ from pre_processing import FeatureStatistics
 class Viterbi:
     def __init__(self, v, sentence_hist_list: [[History]], tags_set, all_possible_tags_dict,
                  get_feature_from_hist, word_possible_tag_set, word_possible_tag_with_threshold_dict, prob_dict,
-                 exp_dict):
+                 exp_dict, threshold, reg_lambda):
         self.v = v
         self.sentence_list = sentence_hist_list
         tags_set.add('*')
@@ -33,7 +33,10 @@ class Viterbi:
         self.exp_dict = exp_dict
         self.res_path = 'res'
         self.dump_name = 'test1'
+        self.threshold = threshold
+        self.reg_lambda = reg_lambda
 
+    @timeit
     def predict_all_test(self):
         print('starting inference')
         all_res_tags = []
@@ -175,42 +178,8 @@ class Viterbi:
     def dump_res(self, all_tagged_res_list, all_gt_tags, all_res_tags):
         if not os.path.isdir(self.res_path):
             os.makedirs(self.res_path)
-        dump_path = os.path.join(self.res_path, self.dump_name)
+        dump_name = self.dump_name + '_' + str(self.threshold) + '_' + str(self.reg_lambda)
+        dump_path = os.path.join(self.res_path, dump_name)
         with open(dump_path, 'wb') as f:
             res = (all_tagged_res_list, all_gt_tags, all_res_tags)
             pickle.dump(res, f)
-
-
-# res_handler = ResultsHandler()
-# res_handler.get_res()
-# pass
-
-# RUN VITERBI
-v = MaximumEntropyMarkovModel.load_v_from_pickle(dump_weights_path='weights', version=1, reg_lambda=0.02)
-train1_path = 'data/train1.wtag'
-test1_path = 'data/test1.wtag'
-ft_statistics = FeatureStatistics(input_file_path=train1_path, threshold=10)
-ft_statistics.pre_process(fill_possible_tag_dict=False)
-test_sentence_hist_list = FeatureStatistics.fill_ordered_history_list(file_path=test1_path)
-tag_set = ft_statistics.tags_set
-all_possible_tags_dict = ft_statistics.all_possible_tags_dict
-get_ft_from_hist_func = ft_statistics.get_non_zero_sparse_feature_vec_indices_from_history
-word_possible_tag_set = ft_statistics.word_possible_tag_set
-word_possible_tag_with_threshold_dict = ft_statistics.word_possible_tag_with_threshold_dict
-
-_, prob_dict, exp_dict = MaximumEntropyMarkovModel.calc_normalization_term_exp_dict_prob_dict(
-    v=v, all_possible_hist_feature_dict=all_possible_tags_dict,
-    sentence_history_list=ft_statistics.history_sentence_list, word_to_tags_set_dict=word_possible_tag_set,
-    word_to_most_probable_tag_set=word_possible_tag_with_threshold_dict
-)
-
-
-viterbi = Viterbi(
-    v=v, sentence_hist_list=test_sentence_hist_list, tags_set=tag_set,
-    all_possible_tags_dict=all_possible_tags_dict, get_feature_from_hist=get_ft_from_hist_func,
-    word_possible_tag_set=word_possible_tag_set,
-    word_possible_tag_with_threshold_dict=word_possible_tag_with_threshold_dict,
-    prob_dict=prob_dict,
-    exp_dict=exp_dict
-)
-viterbi.predict_all_test()

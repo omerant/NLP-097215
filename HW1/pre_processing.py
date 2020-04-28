@@ -161,7 +161,7 @@ class FeatureStatistics:
         print(f'num_total_features: {sum(total_feature_count)}')
 
     @timeit
-    def fill_all_possible_tags_dict(self, hist_ft_dict_path):
+    def fill_all_possible_tags_dict(self, hist_ft_dict_path, hist_dict_name):
         print('filling all_possible_prev_tags_dict')
         dict_folder = 'hist_feature_dict'
         if not os.path.isdir(dict_folder):
@@ -177,7 +177,10 @@ class FeatureStatistics:
                                        ctag=ctag, nword=hist.nword, pword=hist.pword)
                     if not self.all_possible_tags_dict.get(new_hist, None):
                         self.all_possible_tags_dict[new_hist] = self.get_non_zero_sparse_feature_vec_indices_from_history(new_hist)
-        with open(hist_ft_dict_path, "wb") as f:
+        if not os.path.isdir(hist_ft_dict_path):
+            os.makedirs(hist_ft_dict_path)
+        full_path = os.path.join(hist_ft_dict_path, hist_dict_name)
+        with open(full_path, "wb") as f:
             p = pickle.Pickler(f)
             p.fast = True
             p.dump(self.all_possible_tags_dict)
@@ -248,19 +251,10 @@ class FeatureStatistics:
         self.fill_num_features()
         self.print_num_features()
 
-        hist_ft_dict_path = os.path.join('hist_feature_dict', f'version={self.version}_threshold={self.threshold}')
+        hist_ft_dict_path = os.path.join('hist_feature_dict', f'th={self.threshold}')
+        hist_dict_name = f'version={self.version}_threshold={self.threshold}'
         if fill_possible_tag_dict:
-            self.fill_all_possible_tags_dict(hist_ft_dict_path)
+            self.fill_all_possible_tags_dict(hist_ft_dict_path, hist_dict_name)
         else:
-            dump_path = hist_ft_dict_path
+            dump_path = os.path.join(hist_ft_dict_path, hist_dict_name)
             self.load_all_possible_tags_dict(path=dump_path)
-
-    # def pre_process_test(self, ):
-
-
-if __name__ == '__main__':
-    train1_path = 'data/train1.wtag'
-    feature_statistics = FeatureStatistics(input_file_path=train1_path, threshold=10)
-    feature_statistics.pre_process(fill_possible_tag_dict=True)
-    pass
-
