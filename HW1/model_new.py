@@ -106,7 +106,6 @@ class MaximumEntropyMarkovModel:
     @staticmethod
     def calc_objective_per_iter(*args):
         v = args[0]
-        print(v)
         all_possible_hist_feature_dict = args[1]
         reg_lambda = args[2]
         empirical_counts = args[3]

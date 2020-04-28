@@ -64,7 +64,7 @@ def predict():
     viterbi.predict_all_test()
 
 # run example:
-# python run_all.py --th 500 --tr data/train1.wtag --te data/test1_short.wtag --reg-lambda 200.
+# python run_all.py --th 500 --tra data/train1.wtag --te test1_short.wtag --reg-lambda 200
 
 
 if __name__ == '__main__':
