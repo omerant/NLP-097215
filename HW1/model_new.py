@@ -61,7 +61,6 @@ class MaximumEntropyMarkovModel:
                     tag_set = word_to_tags_set_dict[hist.cword]
 
                 # fill exp dict
-                dot_prod = None
                 for tag in tag_set:
                     n_hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag,
                                      nword=hist.nword, pword=hist.pword, ctag=tag)
@@ -69,9 +68,10 @@ class MaximumEntropyMarkovModel:
                     if not exp_dict.get(n_hist, None):
                         dot_prod = np.sum(v[all_possible_hist_feature_dict[n_hist]])
                         exp_dict[n_hist] = np.exp(dot_prod).astype(np.float128)
-                        cur_possible_hist_list.append(n_hist)
 
+                    cur_possible_hist_list.append(n_hist)
                     norm_i += exp_dict[n_hist]
+
                 # fill prob_dict
                 for idx, hist in enumerate(cur_possible_hist_list):
                     if len(cur_possible_hist_list) == 1:
@@ -81,7 +81,7 @@ class MaximumEntropyMarkovModel:
 
                 # update normzliaztion term
                 if len(cur_possible_hist_list) == 1:
-                    norm_term += dot_prod
+                    norm_term += np.sum(v[all_possible_hist_feature_dict[n_hist]]) #dot prod
                 else:
                     norm_term += np.log(norm_i)
 
