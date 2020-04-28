@@ -14,7 +14,8 @@ from pre_processing import FeatureStatistics
 
 class Viterbi:
     def __init__(self, v, sentence_hist_list: [[History]], tags_set, all_possible_tags_dict,
-                 get_feature_from_hist, word_possible_tag_set, word_possible_tag_with_threshold_dict, prob_dict):
+                 get_feature_from_hist, word_possible_tag_set, word_possible_tag_with_threshold_dict, prob_dict,
+                 exp_dict):
         self.v = v
         self.sentence_list = sentence_hist_list
         tags_set.add('*')
@@ -29,7 +30,7 @@ class Viterbi:
         self.pi_tables = None
         self.bp_tables = None
         self.prob_dict = prob_dict
-        self.exp_dict = dict()
+        self.exp_dict = exp_dict
         self.res_path = 'res'
         self.dump_name = 'test1'
 
@@ -88,10 +89,10 @@ class Viterbi:
                 ptag_set = {'*'}
 
             ctag_set = self.get_possible_tag_set_from_word(hist.cword)
-            cur_possible_hist_list = []
             for pptag in pptag_set:
                 for ptag in ptag_set:
                     norm_i = 0.
+                    cur_possible_hist_list = []
                     for c_tag in ctag_set:
                         n_hist = History(cword=hist.cword, pptag=pptag, ptag=ptag,
                                          nword=hist.nword, pword=hist.pword, ctag=c_tag)
@@ -107,6 +108,7 @@ class Viterbi:
                     # fill prob_dict
                     for hist in cur_possible_hist_list:
                         if not self.prob_dict.get(hist, None):
+                            print(f' len of possible hist list: {len(cur_possible_hist_list)}')
                             if len(cur_possible_hist_list) == 1:
                                 self.prob_dict[hist] = 1
                             else:
@@ -197,7 +199,7 @@ get_ft_from_hist_func = ft_statistics.get_non_zero_sparse_feature_vec_indices_fr
 word_possible_tag_set = ft_statistics.word_possible_tag_set
 word_possible_tag_with_threshold_dict = ft_statistics.word_possible_tag_with_threshold_dict
 
-_, prob_dict = MaximumEntropyMarkovModel.calc_normalization_term_exp_dict_prob_dict(
+_, prob_dict, exp_dict = MaximumEntropyMarkovModel.calc_normalization_term_exp_dict_prob_dict(
     v=v, all_possible_hist_feature_dict=all_possible_tags_dict,
     sentence_history_list=ft_statistics.history_sentence_list, word_to_tags_set_dict=word_possible_tag_set,
     word_to_most_probable_tag_set=word_possible_tag_with_threshold_dict
@@ -209,6 +211,7 @@ viterbi = Viterbi(
     all_possible_tags_dict=all_possible_tags_dict, get_feature_from_hist=get_ft_from_hist_func,
     word_possible_tag_set=word_possible_tag_set,
     word_possible_tag_with_threshold_dict=word_possible_tag_with_threshold_dict,
-    prob_dict=prob_dict
+    prob_dict=prob_dict,
+    exp_dict=exp_dict
 )
 viterbi.predict_all_test()

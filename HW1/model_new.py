@@ -85,7 +85,7 @@ class MaximumEntropyMarkovModel:
                 else:
                     norm_term += np.log(norm_i)
 
-        return norm_term, prob_dict
+        return norm_term, prob_dict, exp_dict
 
     @staticmethod
     def calc_expected_counts(history_sentence_list, prob_dict, all_possible_hist_feature_dict,
@@ -116,7 +116,7 @@ class MaximumEntropyMarkovModel:
         word_to_most_probable_tag_set = args[6]
         linear_term = v.dot(empirical_counts)
 
-        normalization_term, prob_dict = MaximumEntropyMarkovModel.calc_normalization_term_exp_dict_prob_dict(
+        normalization_term, prob_dict, _ = MaximumEntropyMarkovModel.calc_normalization_term_exp_dict_prob_dict(
             v, all_possible_hist_feature_dict, sentence_history_list,
             word_to_tags_set_dict, word_to_most_probable_tag_set
         )
