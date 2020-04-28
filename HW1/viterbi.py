@@ -110,7 +110,7 @@ class Viterbi:
                             if not self.all_possible_tags_dict.get(n_hist, None):
                                 self.all_possible_tags_dict[n_hist] = self.get_feature_from_hist(n_hist)
                             dot_prod = np.sum(self.v[self.all_possible_tags_dict[n_hist]])
-                            if dot_prod > -720:
+                            if dot_prod > MIN_EXP_VAL:
                                 self.exp_dict[n_hist] = np.exp(dot_prod).astype(np.float64)
                             else:
                                 self.exp_dict[n_hist] = 0.
