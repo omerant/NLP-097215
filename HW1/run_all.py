@@ -21,7 +21,7 @@ args = parser.parse_args()
 
 @timeit
 def pre_process(train_path, threshold):
-    feature_statistics = FeatureStatistics(input_file_path=args.train_path, threshold=args.threshold)
+    feature_statistics = FeatureStatistics(input_file_path=train_path, threshold=threshold)
     feature_statistics.pre_process(fill_possible_tag_dict=True)
 
 
@@ -69,7 +69,7 @@ def run_all(train_path, threshold, reg_lambda, test_path):
     train(train_path=train_path, threshold=threshold, reg_lambda=reg_lambda)
     predict(train_path=train_path, threshold=threshold, reg_lambda=reg_lambda, test_path=test_path)
 # run example:
-# python run_all.py --th 10 --tra data/train1.wtag --te data/test1.wtag --reg-lambda 0.01
+# python run_all.py --th 10 --tra data/train1.wtag --te data/test1.wtag --reg-lambda 0.01 --run-all true
 # pre_process  only
 # python run_all.py --th 10 --tra data/train1.wtag --te data/test1_short.wtag --reg-lambda 0.01 --pp true
 # train only
