@@ -149,7 +149,10 @@ class Viterbi:
                         t_index = self.tag_to_index[t]
                         new_hist = History(cword=cur_hist.cword, pptag=t, ptag=u,
                                            ctag=v, nword=cur_hist.nword, pword=cur_hist.pword)
-                        q = np.log(self.prob_dict[new_hist])
+                        if np.isclose(self.prob_dict[new_hist], 0.):
+                            q = -np.inf
+                        else:
+                            q = np.log(self.prob_dict[new_hist])
                         pi = self.pi_tables[k - 1, t_index, self.tag_to_index[u]]
                         res = q + pi
                         if res > max_pi_mul_q_val:
