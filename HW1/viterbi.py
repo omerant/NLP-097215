@@ -108,7 +108,6 @@ class Viterbi:
                     # fill prob_dict
                     for hist in cur_possible_hist_list:
                         if not self.prob_dict.get(hist, None):
-                            print(f' len of possible hist list: {len(cur_possible_hist_list)}')
                             if len(cur_possible_hist_list) == 1:
                                 self.prob_dict[hist] = 1
                             else:
