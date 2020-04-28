@@ -3,13 +3,6 @@ import pickle
 import os
 from features import History
 from utils import timeit
-from model_new import MaximumEntropyMarkovModel
-from pre_processing import FeatureStatistics
-
-#genrally - t is TAGi-2, u is TAGi-1, v is currentTAG
-#probability func
-#common_features func
-#all_tags starts from 0 with '*'
 
 
 class Viterbi:
@@ -35,6 +28,8 @@ class Viterbi:
         self.dump_name = 'test1'
         self.threshold = threshold
         self.reg_lambda = reg_lambda
+        self.known_words = {word for word in self.word_possible_tag_set}
+        self.unknown_words = set()
 
     def predict_all_test(self):
         print('starting inference')
@@ -74,13 +69,15 @@ class Viterbi:
         return acc, right_tag_list
 
     def get_possible_tag_set_from_word(self, word):
-        if self.word_possible_tag_with_threshold_dict.get(word, None):
+        if self.word_possible_tag_with_threshold_dict.get(word, None) or \
+                self.word_possible_tag_with_threshold_dict.get(word.lower(), None) or \
+                self.word_possible_tag_with_threshold_dict.get(word.upper(), None):
             tag_set = {self.word_possible_tag_with_threshold_dict[word][0]}
-        elif self.word_possible_tag_set.get(word, None):
+        elif self.word_possible_tag_set.get(word, None) or self.word_possible_tag_set.get(word.lower(), None) \
+                or self.word_possible_tag_set.get(word.upper(), None):
             tag_set = self.word_possible_tag_set[word]
         else:  # this is a new word
             tag_set = self.tags_set - {'*'}
-
         return tag_set
 
     @timeit
