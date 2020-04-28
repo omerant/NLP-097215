@@ -93,7 +93,10 @@ class Viterbi:
     @staticmethod
     def calc_accuracy(res, gt):
         right_tag_list = [1 if res_tag == true_tag else 0 for res_tag, true_tag in zip(res, gt)]
-        acc = (sum(right_tag_list)/len(right_tag_list)) * 100
+        if len(right_tag_list) > 0:
+            acc = (sum(right_tag_list)/len(right_tag_list)) * 100
+        else:
+            acc = 0.
         return acc, right_tag_list
 
     def get_possible_tag_set_from_word(self, word):
