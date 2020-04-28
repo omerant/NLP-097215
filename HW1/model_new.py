@@ -75,7 +75,14 @@ class MaximumEntropyMarkovModel:
                     if len(cur_possible_hist_list) == 1:
                         prob_dict[hist] = 1
                     else:
-                        prob_dict[hist] = np.float128(exp_dict[hist] / norm_i)
+                        try:
+                            prob_dict[hist] = np.float128(exp_dict[hist] / norm_i)
+                        except:
+                            print(f'cword: {hist.cword}')
+                            print(f'cur tag set: {tag_set}')
+                            print(f'exp_dict[hist]: {exp_dict[hist]}')
+                            print(f'norm_i: {norm_i}')
+                            raise Exception
 
                 # update normzliaztion term
                 if len(cur_possible_hist_list) == 1:
