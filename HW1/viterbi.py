@@ -29,7 +29,7 @@ class Viterbi:
         self.threshold = threshold
         self.reg_lambda = reg_lambda
         self.known_words = {word for word in self.word_possible_tag_set}
-        self.unknown_words = set()
+        self.unknown_words = {word for word in self.word_possible_tag_set.keys()}
 
     def predict_all_test(self):
         print('starting inference')
@@ -37,18 +37,38 @@ class Viterbi:
         all_acc_list = []
         all_tagged_res_list = []# will be saved to file
         all_gt_tags = []
-        all_right_tag_list=[]
+        all_gt_tags_known = []
+        all_gt_tags_unknown = []
+
+        all_right_tag_list = []
+        all_right_tag_list_known = []
+        all_right_tag_list_unknown = []
+
         for num, sentence in enumerate(self.sentence_list):
             if num + 1 % 10 == 0:
                 print(f'handling sentence number {num+1}')
             cur_res = self.predict(sentence)
+            cur_res_known = [tag_res for hist, tag_res in zip(sentence, cur_res) if self.word_possible_tag_set.get(hist.cword, None)]
+            cur_res_unknown = [tag_res for hist, tag_res in zip(sentence, cur_res) if not self.word_possible_tag_set.get(hist.cword, None)]
             all_res_tags.append(cur_res)
+
             ground_truth = [hist.ctag for hist in sentence]
+            ground_truth_known = [hist.ctag for hist in sentence if self.word_possible_tag_set.get(hist.cword, None)]
+            ground_truth_unknown = [hist.ctag for hist in sentence if not self.word_possible_tag_set.get(hist.cword, None)]
             all_gt_tags.append(ground_truth)
+            all_gt_tags_known.append(ground_truth_known)
+            all_gt_tags_unknown.append(ground_truth_unknown)
             res_acc, right_tag_list = self.calc_accuracy(cur_res, ground_truth)
+            res_acc_known, right_tag_list_known = self.calc_accuracy(cur_res_known, ground_truth_known)
+            res_acc_unknown, right_tag_list_unknown = self.calc_accuracy(cur_res_unknown, ground_truth_unknown)
+
             print(f'accuracy for sentence {num+1}: {res_acc}')
+            print(f'known words accuracy for sentence {num + 1}: {res_acc_known}')
+            print(f'unknown words accuracy for sentence {num + 1}: {res_acc_unknown}')
             all_acc_list.append(res_acc)
             all_right_tag_list += right_tag_list
+            all_right_tag_list_known += right_tag_list_known
+            all_right_tag_list_unknown += right_tag_list_unknown
             cur_tagged_res = []
             for hist, tag in zip(sentence, cur_res):
                 cword = hist.cword
@@ -58,9 +78,17 @@ class Viterbi:
             assert len(cur_res) == len(sentence)
         # print(all_tagged_res_list)
         # print(f'total accuracy: {sum(all_acc_list)/len(all_acc_list)}')
-        print(f'total accuracy: {sum(all_right_tag_list) / len(all_right_tag_list) * 100}')
+        print(f'total accuracy: {self._calc_acc(all_right_tag_list)}')
+        print(f'known words accuracy: {self._calc_acc(all_right_tag_list_known)}')
+        print(f'unknown words accuracy: {self._calc_acc(all_right_tag_list_unknown)}')
         self.dump_res(all_tagged_res_list, all_gt_tags, all_res_tags)
         return all_res_tags, all_acc_list
+
+    @staticmethod
+    def _calc_acc(binary_list):
+        if sum(binary_list) == 0:
+            return 0.
+        return sum(binary_list) / len(binary_list) * 100
 
     @staticmethod
     def calc_accuracy(res, gt):
@@ -166,7 +194,7 @@ class Viterbi:
                         print(f'CURRENT WORD: {cur_hist.cword}')
                         raise Exception()
                     # assert max_t_index != 10**3
-                    print(f'max index: {max_t_index}')
+                    # print(f'max index: {max_t_index}')
                     self.pi_tables[k, self.tag_to_index[u], self.tag_to_index[v]] = max_pi_mul_q_val
                     self.bp_tables[k, self.tag_to_index[u], self.tag_to_index[v]] = max_t_index
             pp_tag_set = p_tag_set
