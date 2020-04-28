@@ -66,11 +66,11 @@ def predict():
 # run example:
 # python run_all.py --th 10 --tra data/train1.wtag --te data/test1.wtag --reg-lambda 0.01
 # pre_process  only
-# python run_all.py --th 10 --tra data/train1.wtag --te test1_short.wtag --reg-lambda 0.01 --pp true
+# python run_all.py --th 10 --tra data/train1.wtag --te data/test1_short.wtag --reg-lambda 0.01 --pp true
 # train only
-# python run_all.py --th 10 --tra data/train1.wtag --te test1_short.wtag --reg-lambda 0.01 --tr true
+# python run_all.py --th 10 --tra data/train1.wtag --te data/test1_short.wtag --reg-lambda 0.01 --tr true
 # predict only
-# python run_all.py --th 10 --tra data/train1.wtag --te test1_short.wtag --reg-lambda 0.01 --pr true
+# python run_all.py --th 10 --tra data/train1.wtag --te data/test1_short.wtag --reg-lambda 0.01 --pr true
 
 
 if __name__ == '__main__':
