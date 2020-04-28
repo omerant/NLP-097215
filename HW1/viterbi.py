@@ -36,7 +36,6 @@ class Viterbi:
         self.threshold = threshold
         self.reg_lambda = reg_lambda
 
-    @timeit
     def predict_all_test(self):
         print('starting inference')
         all_res_tags = []
@@ -125,7 +124,6 @@ class Viterbi:
             pptag_set = ptag_set
             ptag_set = ctag_set
 
-    @timeit
     def calc_res_tags(self, sentence):
         # print('calculating pi')
         for ind, k in enumerate(range(1, len(sentence) + 1)):
@@ -166,7 +164,6 @@ class Viterbi:
         res_tags = list(reversed([self.index_to_tag[res] for res in res_numbers]))
         return res_tags
 
-    @timeit
     def predict(self, sentence):
         self.pi_tables = np.full(shape=(len(sentence) + 1, len(self.tags_set), len(self.tags_set)), fill_value=-np.inf)
         self.pi_tables[0, self.tag_to_index["*"], self.tag_to_index["*"]] = 0.

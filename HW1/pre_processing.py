@@ -6,7 +6,6 @@ from functools import partial
 import features as ft
 import numpy as np
 from features import History, WordAndTagConstants
-from utils import timeit
 
 
 class FeatureStatistics:
@@ -95,7 +94,6 @@ class FeatureStatistics:
                 hist_sentence_list.append(new_sentence_hist_list)
         return hist_sentence_list
 
-    @timeit
     def fill_tags_set(self):
         tag_set = set()
         for sentence in self.history_sentence_list:
@@ -147,7 +145,6 @@ class FeatureStatistics:
 
         return tag_word_dict
 
-    @timeit
     def print_num_features(self):
         print('\n\n\n')
         total_feature_count = []
@@ -160,7 +157,6 @@ class FeatureStatistics:
 
         print(f'num_total_features: {sum(total_feature_count)}')
 
-    @timeit
     def fill_all_possible_tags_dict(self, hist_ft_dict_path, hist_dict_name):
         print('filling all_possible_prev_tags_dict')
         dict_folder = 'hist_feature_dict'
@@ -168,8 +164,6 @@ class FeatureStatistics:
             os.mkdir(dict_folder)
 
         for idx, sentence in enumerate(self.history_sentence_list):
-            if idx % 10 == 0:
-                print(f'filled sentence {idx}')
             for hist in sentence:
                 tag_set = self.word_possible_tag_set[hist.cword]
                 for ctag in tag_set:
@@ -187,14 +181,12 @@ class FeatureStatistics:
 
         print(f'total keys in all possible tags dict: {len(self.all_possible_tags_dict.keys())}')
 
-    @timeit
     def load_all_possible_tags_dict(self, path):
         print('loading all_possible_prev_tags_dict')
         with open(path, 'rb') as f:
             self.all_possible_tags_dict = pickle.load(f)
         print('finished loading all_possible_prev_tags_dict')
 
-    @timeit
     def fill_num_features(self):
         total_feature_count = 0
         feature_dicts = sorted([attr for attr in dir(self) if attr.startswith('fd')])
@@ -204,7 +196,6 @@ class FeatureStatistics:
             total_feature_count += num_features
         self.num_features = total_feature_count
 
-    @timeit
     def fill_feature_dicts(self):
         feature_dicts = sorted([attr for attr in dir(self) if attr.startswith('fd')])
         for fd_name in feature_dicts:
@@ -215,7 +206,6 @@ class FeatureStatistics:
     def _filter_dict(d, threshold):
         return OrderedDict({k: v for k, v in sorted(d.items(), key=lambda x: x[0]) if d[k] > threshold})
 
-    @timeit
     def filter_features_by_threshold(self):
         filter_dict = partial(self._filter_dict, threshold=self.threshold)
         feature_dicts = sorted([attr for attr in dir(self) if attr.startswith('fd')])
@@ -244,7 +234,6 @@ class FeatureStatistics:
         non_zero_indices = np.nonzero(feature_vec)
         return non_zero_indices
 
-    @timeit
     def pre_process(self, fill_possible_tag_dict: bool = True):
         self.fill_feature_dicts()
         self.filter_features_by_threshold()

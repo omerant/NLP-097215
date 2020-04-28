@@ -4,7 +4,6 @@ import pickle
 from pre_processing import FeatureStatistics
 from features import History
 from scipy.optimize import fmin_l_bfgs_b
-from utils import timeit
 
 np.seterr(all='raise')
 
@@ -131,7 +130,6 @@ class MaximumEntropyMarkovModel:
         # FINISHED CALCULATING GRAD
         return (-1) * likelihood, (-1) * grad
 
-    @timeit
     def optimize_model(self):
         arg_1 = self.feature_statistics.all_possible_tags_dict
         arg_2 = self.reg_lambda
