@@ -16,9 +16,9 @@ class MaximumEntropyMarkovModel:
         self.prob_dict = dict()
 
     @staticmethod
-    def load_v_from_pickle(dump_weights_path, version):
+    def load_v_from_pickle(dump_weights_path, version, reg_lambda):
         weights_dir = os.path.join(dump_weights_path, str(version) +
-                                   f'-reg_lambda={0.01}-num_iter={1}')
+                                   f'-reg_lambda={reg_lambda}-num_iter={1}')
         with open(weights_dir, 'rb') as f:
             v = pickle.load(f).reshape(-1)
         return v
@@ -67,10 +67,7 @@ class MaximumEntropyMarkovModel:
 
                     if not exp_dict.get(n_hist, None):
                         dot_prod = np.sum(v[all_possible_hist_feature_dict[n_hist]])
-                        try:
-                            exp_dict[n_hist] = np.exp(dot_prod).astype(np.float64)
-                        except:
-                            break
+                        exp_dict[n_hist] = np.exp(dot_prod).astype(np.float128)
                         cur_possible_hist_list.append(n_hist)
 
                     norm_i += exp_dict[n_hist]
@@ -79,23 +76,13 @@ class MaximumEntropyMarkovModel:
                     if len(cur_possible_hist_list) == 1:
                         prob_dict[hist] = 1
                     else:
-                        prob_dict[hist] = exp_dict[hist] / norm_i
-                    # try:
-                    #     prob_dict[hist] = exp_dict[hist] / norm_i
-                    # except:
-                    #     print(f'num of histories in list: {len(cur_possible_hist_list)}')
-                    #     print(f'exp_dict[hist]: {exp_dict[hist]}')
-                    #     print(f'norm_i: {norm_i}')
-                    #     prob_dict[hist] = 1
+                        prob_dict[hist] = np.float128(exp_dict[hist] / norm_i)
 
                 # update normzliaztion term
                 if len(cur_possible_hist_list) == 1:
                     norm_term += dot_prod
                 else:
-                    if np.isclose(norm_i, 0.):
-                        pass
-                    else:
-                        norm_term += np.log(norm_i)
+                    norm_term += np.log(norm_i)
 
         return norm_term, prob_dict
 
@@ -148,7 +135,7 @@ class MaximumEntropyMarkovModel:
     @timeit
     def optimize_model(self):
         arg_1 = self.feature_statistics.all_possible_tags_dict
-        arg_2 = 0.01  # lambda_reg
+        arg_2 = 0.02  # lambda_reg
         args_3 = self.calc_empirical_counts()
         args_4 = self.feature_statistics.history_sentence_list
         args_5 = self.feature_statistics.word_possible_tag_set
