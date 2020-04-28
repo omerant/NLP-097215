@@ -4,7 +4,7 @@ import pickle
 from pre_processing import FeatureStatistics
 from features import History
 from scipy.optimize import fmin_l_bfgs_b
-
+from utils import MIN_EXP_VAL, MIN_LOG_VAL
 np.seterr(all='raise')
 
 
@@ -65,8 +65,11 @@ class MaximumEntropyMarkovModel:
 
                     if not exp_dict.get(n_hist, None):
                         dot_prod = np.sum(v[all_possible_hist_feature_dict[n_hist]])
-                        exp_dict[n_hist] = np.exp(dot_prod).astype(np.float128)
-
+                        # exp_dict[n_hist] = np.exp(dot_prod).astype(np.float128)
+                        if dot_prod > MIN_EXP_VAL:
+                            exp_dict[n_hist] = np.exp(dot_prod).astype(np.float64)
+                        else:
+                            exp_dict[n_hist] = 0.
                     cur_possible_hist_list.append(n_hist)
                     norm_i += exp_dict[n_hist]
 
@@ -76,7 +79,8 @@ class MaximumEntropyMarkovModel:
                         prob_dict[hist] = 1
                     else:
                         try:
-                            prob_dict[hist] = np.float128(exp_dict[hist] / norm_i)
+                            # prob_dict[hist] = np.float128(exp_dict[hist] / norm_i)
+                            prob_dict[hist] = np.float64(exp_dict[hist] / norm_i)
                         except:
                             print(f'cword: {hist.cword}')
                             print(f'cur tag set: {tag_set}')
@@ -145,7 +149,7 @@ class MaximumEntropyMarkovModel:
         args_5 = self.feature_statistics.word_possible_tag_set
         args_6 = self.feature_statistics.word_possible_tag_with_threshold_dict
         args = (arg_1, arg_2, args_3, args_4, args_5, args_6)
-        w_0 = np.random.normal(0, 0.01, (self.feature_statistics.num_features)).astype(np.float128)
+        w_0 = np.random.normal(0, 0.01, (self.feature_statistics.num_features)).astype(np.float64)
         # w_0 = np.zeros(self.feature_statistics.num_features, dtype=np.float32)
         optimal_params = fmin_l_bfgs_b(func=self.calc_objective_per_iter, x0=w_0, args=args, maxiter=10000, iprint=1)
         weights = optimal_params[0]

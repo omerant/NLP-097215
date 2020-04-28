@@ -2,7 +2,7 @@ import numpy as np
 import pickle
 import os
 from features import History
-from utils import timeit
+from utils import timeit, MIN_EXP_VAL, MIN_LOG_VAL
 
 
 class Viterbi:
@@ -110,7 +110,10 @@ class Viterbi:
                             if not self.all_possible_tags_dict.get(n_hist, None):
                                 self.all_possible_tags_dict[n_hist] = self.get_feature_from_hist(n_hist)
                             dot_prod = np.sum(self.v[self.all_possible_tags_dict[n_hist]])
-                            self.exp_dict[n_hist] = np.exp(dot_prod).astype(np.float128)
+                            if dot_prod > -720:
+                                self.exp_dict[n_hist] = np.exp(dot_prod).astype(np.float64)
+                            else:
+                                self.exp_dict[n_hist] = 0.
 
                         cur_possible_hist_list.append(n_hist)
                         norm_i += self.exp_dict[n_hist]
@@ -122,7 +125,7 @@ class Viterbi:
                                 self.prob_dict[hist] = 1
                             else:
                                 try:
-                                    self.prob_dict[hist] = np.float128(self.exp_dict[hist] / norm_i)
+                                    self.prob_dict[hist] = np.float64(self.exp_dict[hist] / norm_i)
                                 except:
                                     print(f'cword: {hist.cword}')
                                     print(f'cur tag set: {ctag_set}')
@@ -144,21 +147,26 @@ class Viterbi:
             for v in cur_tag_set:
                 for u in p_tag_set:
                     max_pi_mul_q_val = -np.inf
-                    max_t_index = 0
+                    max_t_index = 10**3
                     for t in pp_tag_set:
                         t_index = self.tag_to_index[t]
                         new_hist = History(cword=cur_hist.cword, pptag=t, ptag=u,
                                            ctag=v, nword=cur_hist.nword, pword=cur_hist.pword)
-                        if np.isclose(self.prob_dict[new_hist], 0.):
+                        if self.prob_dict[new_hist] < MIN_LOG_VAL:
                             q = -np.inf
                         else:
                             q = np.log(self.prob_dict[new_hist])
+
                         pi = self.pi_tables[k - 1, t_index, self.tag_to_index[u]]
                         res = q + pi
                         if res > max_pi_mul_q_val:
                             max_pi_mul_q_val = res
                             max_t_index = t_index
-
+                    if max_t_index == 10**3:
+                        print(f'CURRENT WORD: {cur_hist.cword}')
+                        raise Exception()
+                    # assert max_t_index != 10**3
+                    print(f'max index: {max_t_index}')
                     self.pi_tables[k, self.tag_to_index[u], self.tag_to_index[v]] = max_pi_mul_q_val
                     self.bp_tables[k, self.tag_to_index[u], self.tag_to_index[v]] = max_t_index
             pp_tag_set = p_tag_set
