@@ -20,25 +20,25 @@ args = parser.parse_args()
 
 
 @timeit
-def pre_process():
+def pre_process(train_path, threshold):
     feature_statistics = FeatureStatistics(input_file_path=args.train_path, threshold=args.threshold)
     feature_statistics.pre_process(fill_possible_tag_dict=True)
 
 
 @timeit
-def train():
-    memm = MaximumEntropyMarkovModel(train_data_path=args.train_path, threshold=args.threshold,
-                                     reg_lambda=args.reg_lambda)
+def train(train_path, threshold, reg_lambda):
+    memm = MaximumEntropyMarkovModel(train_data_path=train_path, threshold=threshold,
+                                     reg_lambda=reg_lambda)
     memm.optimize_model()
 
 
 @timeit
-def predict():
+def predict(train_path, threshold, reg_lambda, test_path):
     v = MaximumEntropyMarkovModel.load_v_from_pickle(dump_weights_path='weights', threshold=args.threshold,
-                                                     reg_lambda=args.reg_lambda)
-    ft_statistics = FeatureStatistics(input_file_path=args.train_path, threshold=args.threshold)
+                                                     reg_lambda=reg_lambda)
+    ft_statistics = FeatureStatistics(input_file_path=train_path, threshold=threshold)
     ft_statistics.pre_process(fill_possible_tag_dict=False)
-    test_sentence_hist_list = FeatureStatistics.fill_ordered_history_list(file_path=args.test_path)
+    test_sentence_hist_list = FeatureStatistics.fill_ordered_history_list(file_path=test_path)
     tag_set = ft_statistics.tags_set
     all_possible_tags_dict = ft_statistics.all_possible_tags_dict
     get_ft_from_hist_func = ft_statistics.get_non_zero_sparse_feature_vec_indices_from_history
@@ -63,6 +63,11 @@ def predict():
     )
     viterbi.predict_all_test()
 
+
+def run_all(train_path, threshold, reg_lambda, test_path):
+    pre_process(train_path=train_path, threshold=threshold)
+    train(train_path=train_path, threshold=threshold, reg_lambda=reg_lambda)
+    predict(train_path=train_path, threshold=threshold, reg_lambda=reg_lambda, test_path=test_path)
 # run example:
 # python run_all.py --th 10 --tra data/train1.wtag --te data/test1.wtag --reg-lambda 0.01
 # pre_process  only
@@ -76,15 +81,15 @@ def predict():
 if __name__ == '__main__':
     if args.run_all:
         print('RUNNING ALL FLOW')
-        pre_process()
-        train()
-        predict()
+        pre_process(train_path=args.train_path, threshold=args.threshold)
+        train(train_path=args.train_path, threshold=args.threshold, reg_lambda=args.reg_lambda)
+        predict(train_path=args.train_path, threshold=args.threshold, reg_lambda=args.reg_lambda, test_path=args.test_path)
     elif args.pp:
         print('RUNNING ONLY PRE PROCESS')
-        pre_process()
+        pre_process(train_path=args.train_path, threshold=args.threshold)
     elif args.tr:
         print('RUNNING ONLY TRAINING')
-        train()
+        train(train_path=args.train_path, threshold=args.threshold, reg_lambda=args.reg_lambda)
     elif args.pr:
         print('RUNNING ONLY PREDICT')
-        predict()
+        predict(train_path=args.train_path, threshold=args.threshold, reg_lambda=args.reg_lambda, test_path=args.test_path)
