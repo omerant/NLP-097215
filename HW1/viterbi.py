@@ -70,8 +70,9 @@ class Viterbi:
 
     def get_possible_tag_set_from_word(self, word):
         w_lower = word.lower()
-        w_first_upper = word
+        w_first_upper = list(word)
         w_first_upper[0] = w_first_upper[0].upper()
+        w_first_upper = ''.join(w_first_upper)
 
         if self.word_possible_tag_with_threshold_dict.get(word, None):
             tag_set = {self.word_possible_tag_with_threshold_dict[word][0]}
