@@ -69,13 +69,23 @@ class Viterbi:
         return acc, right_tag_list
 
     def get_possible_tag_set_from_word(self, word):
-        if self.word_possible_tag_with_threshold_dict.get(word, None) or \
-                self.word_possible_tag_with_threshold_dict.get(word.lower(), None) or \
-                self.word_possible_tag_with_threshold_dict.get(word.upper(), None):
+        w_lower = word.lower()
+        w_first_upper = word
+        w_first_upper[0] = w_first_upper[0].upper()
+
+        if self.word_possible_tag_with_threshold_dict.get(word, None):
             tag_set = {self.word_possible_tag_with_threshold_dict[word][0]}
-        elif self.word_possible_tag_set.get(word, None) or self.word_possible_tag_set.get(word.lower(), None) \
-                or self.word_possible_tag_set.get(word.upper(), None):
+        elif self.word_possible_tag_with_threshold_dict.get(w_lower, None):
+            tag_set = {self.word_possible_tag_with_threshold_dict[w_lower][0]}
+        elif self.word_possible_tag_with_threshold_dict.get(w_first_upper, None):
+            tag_set = {self.word_possible_tag_with_threshold_dict[w_first_upper][0]}
+
+        elif self.word_possible_tag_set.get(word, None):
             tag_set = self.word_possible_tag_set[word]
+        elif self.word_possible_tag_set.get(w_lower, None):
+            tag_set = self.word_possible_tag_set[w_lower]
+        elif self.word_possible_tag_set.get(w_first_upper, None):
+            tag_set = self.word_possible_tag_set[w_first_upper]
         else:  # this is a new word
             tag_set = self.tags_set - {'*'}
         return tag_set
