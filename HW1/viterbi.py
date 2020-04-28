@@ -95,14 +95,24 @@ class Viterbi:
                             if not self.all_possible_tags_dict.get(n_hist, None):
                                 self.all_possible_tags_dict[n_hist] = self.get_feature_from_hist(n_hist)
                             dot_prod = np.sum(self.v[self.all_possible_tags_dict[n_hist]])
-                            self.exp_dict[n_hist] = np.exp(dot_prod)
+                            self.exp_dict[n_hist] = np.exp(dot_prod).astype(np.float128)
                             cur_possible_hist_list.append(n_hist)
-                            norm_i += self.exp_dict[n_hist]
+                        norm_i += self.exp_dict[n_hist]
 
                     # fill prob_dict
                     for hist in cur_possible_hist_list:
                         if not self.prob_dict.get(hist, None):
-                            self.prob_dict[hist] = self.exp_dict[hist] / norm_i
+                            if len(cur_possible_hist_list) == 1:
+                                self.prob_dict[hist] = 1
+                            else:
+                                try:
+                                    self.prob_dict[hist] = np.float128(self.exp_dict[hist] / norm_i)
+                                except:
+                                    print(f'cword: {hist.cword}')
+                                    print(f'cur tag set: {ctag_set}')
+                                    print(f'self.exp_dict[hist]: {self.exp_dict[hist]}')
+                                    print(f'norm_i: {norm_i}')
+                                    raise Exception
             pptag_set = ptag_set
             ptag_set = ctag_set
     @timeit
@@ -183,7 +193,7 @@ class ResultsHandler:
 # pass
 
 # RUN VITERBI
-v = MaximumEntropyMarkovModel.load_v_from_pickle(dump_weights_path='weights', version=1)
+v = MaximumEntropyMarkovModel.load_v_from_pickle(dump_weights_path='weights', version=1, reg_lambda=0.02)
 train1_path = 'data/train1.wtag'
 test1_path = 'data/test1.wtag'
 ft_statistics = FeatureStatistics(input_file_path=train1_path, threshold=10)
