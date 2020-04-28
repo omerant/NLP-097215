@@ -59,9 +59,9 @@ class FeatureStatistics:
         self.fd_has_symbol = ft.ContainsSymbolDict()
         self.fd_all_symbol = ft.ContainsOnlySymbolsDict()
 
-        #word length
-        for i in range(1,14):
-            setattr(self, 'fd_word_length'+str(i), ft.WordsLengthDict(i))
+        # #word length
+        # for i in range(1,3):
+        #     setattr(self, 'fd_word_length'+str(i), ft.WordsLengthDict(i))
 
     @staticmethod
     def fill_ordered_history_list(file_path):
@@ -176,7 +176,8 @@ class FeatureStatistics:
                 for ctag in tag_set:
                     new_hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag,
                                        ctag=ctag, nword=hist.nword, pword=hist.pword)
-                    self.all_possible_tags_dict[new_hist] = self.get_non_zero_sparse_feature_vec_indices_from_history(new_hist)
+                    if not self.all_possible_tags_dict.get(new_hist, None):
+                        self.all_possible_tags_dict[new_hist] = self.get_non_zero_sparse_feature_vec_indices_from_history(new_hist)
         with open(hist_ft_dict_path, "wb") as f:
             p = pickle.Pickler(f)
             p.fast = True
