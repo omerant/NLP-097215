@@ -13,9 +13,9 @@ parser.add_argument("--test-path", help="path to test data", type=str, required=
 parser.add_argument("--reg-lambda", help="regularization lambda", type=float, required=True)
 parser.add_argument("--run-all", help="run pre_process + train + predict", type=bool, default=True)
 
-parser.add_argument("--pp", help="run only pre_process", type=bool, required=False)
-parser.add_argument("--tr", help="run only train", type=bool, required=False)
-parser.add_argument("--pr", help="run only predict", type=bool, required=False)
+parser.add_argument("--pp", help="run only pre_process", type=bool, required=False, default=False)
+parser.add_argument("--tr", help="run only train", type=bool, required=False, default=False)
+parser.add_argument("--pr", help="run only predict", type=bool, required=False, default=False)
 args = parser.parse_args()
 
 
@@ -64,7 +64,7 @@ def predict():
     viterbi.predict_all_test()
 
 # run example:
-# python run_all.py --th 500 --tra data/train1.wtag --te test1_short.wtag --reg-lambda 200
+# python run_all.py --th 10 --tra data/train1.wtag --te data/test1.wtag --reg-lambda 0.01
 
 
 if __name__ == '__main__':
