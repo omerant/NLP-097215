@@ -88,10 +88,10 @@ class Viterbi:
                 ptag_set = {'*'}
 
             ctag_set = self.get_possible_tag_set_from_word(hist.cword)
-            norm_i = 0.
             cur_possible_hist_list = []
             for pptag in pptag_set:
                 for ptag in ptag_set:
+                    norm_i = 0.
                     for c_tag in ctag_set:
                         n_hist = History(cword=hist.cword, pptag=pptag, ptag=ptag,
                                          nword=hist.nword, pword=hist.pword, ctag=c_tag)
@@ -100,7 +100,8 @@ class Viterbi:
                                 self.all_possible_tags_dict[n_hist] = self.get_feature_from_hist(n_hist)
                             dot_prod = np.sum(self.v[self.all_possible_tags_dict[n_hist]])
                             self.exp_dict[n_hist] = np.exp(dot_prod).astype(np.float128)
-                            cur_possible_hist_list.append(n_hist)
+
+                        cur_possible_hist_list.append(n_hist)
                         norm_i += self.exp_dict[n_hist]
 
                     # fill prob_dict
@@ -119,6 +120,7 @@ class Viterbi:
                                     raise Exception
             pptag_set = ptag_set
             ptag_set = ctag_set
+
     @timeit
     def calc_res_tags(self, sentence):
         # print('calculating pi')
