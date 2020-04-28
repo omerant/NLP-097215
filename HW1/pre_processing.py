@@ -55,9 +55,9 @@ class FeatureStatistics:
         self.fd_has_symbol = ft.ContainsSymbolDict()
         self.fd_all_symbol = ft.ContainsOnlySymbolsDict()
 
-        # #word length
-        # for i in range(1,3):
-        #     setattr(self, 'fd_word_length'+str(i), ft.WordsLengthDict(i))
+        #word length
+        for i in range(1, 14):
+            setattr(self, 'fd_word_length'+str(i), ft.WordsLengthDict(i))
 
     @staticmethod
     def fill_ordered_history_list(file_path):
