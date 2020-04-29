@@ -2,11 +2,8 @@ from collections import OrderedDict, namedtuple
 from abc import abstractmethod, ABC
 import re
 import utils
+from utils import History, Symbols
 
-
-History = namedtuple('History', 'cword, pptag, ptag, ctag, nword, pword')
-Symbols = """!#$%&?/\|}{~:;.,'`-]"""
-STR_CHECK_SYMBOL = re.compile(Symbols)
 
 class WordAndTagConstants:
     PTAG_SENTENCE_BEGINNING = '*'

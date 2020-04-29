@@ -1,8 +1,8 @@
 import numpy as np
 import pickle
 import os
-from features import History
-from utils import timeit, MIN_EXP_VAL, MIN_LOG_VAL, BASE_PROB
+from utils import History
+from utils import timeit, MIN_EXP_VAL, MIN_LOG_VAL, BASE_PROB, OpenClassTypes, UNKNOWN_WORD
 
 
 class Viterbi:
@@ -28,8 +28,6 @@ class Viterbi:
         self.dump_name = 'test1'
         self.threshold = threshold
         self.reg_lambda = reg_lambda
-        self.known_words = {word for word in self.word_possible_tag_set}
-        self.unknown_words = {word for word in self.word_possible_tag_set.keys()}
 
     def predict_all_test(self):
         print('starting inference')
@@ -102,35 +100,37 @@ class Viterbi:
         return acc, right_tag_list
 
     def get_possible_tag_set_from_word(self, word):
-        w_lower = word.lower()
-        w_first_upper = list(word)
-        w_first_upper[0] = w_first_upper[0].upper()
-        w_first_upper = ''.join(w_first_upper)
+        tag_set = None
         if self.word_possible_tag_with_threshold_dict.get(word, None):
             tag_set = {self.word_possible_tag_with_threshold_dict[word][0]}
-        elif self.word_possible_tag_with_threshold_dict.get(w_lower, None):
-            tag_set = {self.word_possible_tag_with_threshold_dict[w_lower][0]}
-        elif self.word_possible_tag_with_threshold_dict.get(w_first_upper, None):
-            tag_set = {self.word_possible_tag_with_threshold_dict[w_first_upper][0]}
 
         elif self.word_possible_tag_set.get(word, None):
             tag_set = self.word_possible_tag_set[word]
-        elif self.word_possible_tag_set.get(w_lower, None):
-            tag_set = self.word_possible_tag_set[w_lower]
-        elif self.word_possible_tag_set.get(w_first_upper, None):
-            tag_set = self.word_possible_tag_set[w_first_upper]
-        else:  # this is a new word
-            # tag_set = self.tags_set - {'*'}
-            tag_set = {'JJ', 'JJR', 'JJS'} | {'NN', 'NNS', 'NNP', 'NNPS'} \
-                      | {'RB', 'RBR', 'RBS'} | {'VB', 'VBD', 'VBG', 'VBN'}
+
         return tag_set
+
+    # def calc_tag_set_for_unknown(self, hist):
+
 
     @timeit
     def fill_prob_dict_from_sentence(self, sentence):
+        sentence_with_unk = []
         for idx, hist in enumerate(sentence):
             if idx == 0:
                 pptag_set = {'*'}
                 ptag_set = {'*'}
+
+            if not self.word_possible_tag_set.get(hist.cword, None):
+                hist = History(cword=UNKNOWN_WORD, pptag=hist.pptag, ptag=hist.ptag, ctag=hist.ctag,
+                               nword=hist.nword, pword=hist.pword)
+
+            if not self.word_possible_tag_set.get(hist.pword, None):
+                hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag, ctag=hist.ctag,
+                               nword=hist.nword, pword=UNKNOWN_WORD)
+
+            if not self.word_possible_tag_set.get(hist.nword, None):
+                hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag, ctag=hist.ctag,
+                               nword=UNKNOWN_WORD, pword=hist.pword)
 
             ctag_set = self.get_possible_tag_set_from_word(hist.cword)
             for pptag in pptag_set:
@@ -170,9 +170,23 @@ class Viterbi:
         # print('calculating pi')
         for ind, k in enumerate(range(1, len(sentence) + 1)):
             cur_hist = sentence[ind]
+            # check for unknown words:
+
+            if not self.word_possible_tag_set.get(cur_hist.cword, None):
+                cur_hist = History(cword=UNKNOWN_WORD, pptag=cur_hist.pptag, ptag=cur_hist.ptag, ctag=cur_hist.ctag,
+                                   nword=cur_hist.nword, pword=cur_hist.pword)
+
+            if not self.word_possible_tag_set.get(cur_hist.pword, None):
+                cur_hist = History(cword=cur_hist.cword, pptag=cur_hist.pptag, ptag=cur_hist.ptag, ctag=cur_hist.ctag,
+                                   nword=cur_hist.nword, pword=UNKNOWN_WORD)
+
+            if not self.word_possible_tag_set.get(cur_hist.nword, None):
+                cur_hist = History(cword=cur_hist.cword, pptag=cur_hist.pptag, ptag=cur_hist.ptag, ctag=cur_hist.ctag,
+                                   nword=UNKNOWN_WORD, pword=cur_hist.pword)
             if ind == 0:
                 pp_tag_set = {'*'}
                 p_tag_set = {'*'}
+
             cur_tag_set = self.get_possible_tag_set_from_word(cur_hist.cword)
 
             for v in cur_tag_set:

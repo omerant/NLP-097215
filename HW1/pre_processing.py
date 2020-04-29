@@ -5,19 +5,29 @@ from re import split
 from functools import partial
 import features as ft
 import numpy as np
-from features import History, WordAndTagConstants
+from features import WordAndTagConstants
+from utils import History, UNKNOWN_WORD
 
 
 class FeatureStatistics:
-    def __init__(self, input_file_path, threshold=3):
+    def __init__(self, input_file_path, threshold=3, rare_word_num_appearence_th=3):
         self.file_path = input_file_path
         self.history_sentence_list = self.fill_ordered_history_list(self.file_path)
         self.num_sentences = len(self.history_sentence_list)
-        self.tags_set = self.fill_tags_set()
+
+        # REPLACE RARE WORDS WITH UNK
+        # self.rare_word_possible_tag_set = self.fill_rare_word_possible_tag_set(appearances=rare_word_num_appearence)
         self.word_possible_tag_dict = self.fill_word_possible_tag_dict()
+        self.rare_word_set = self.fill_rare_word_set(appearances=rare_word_num_appearence_th)
+        self.replace_rare_word_with_unk_in_hist()
+        # call again to replace with UNK
+        self.word_possible_tag_dict = self.fill_word_possible_tag_dict()
+        self.tags_set = self.fill_tags_set()
+
         self.word_possible_tag_set = self.fill_word_possible_tag_set()
         self.word_possible_tag_with_threshold_dict = self.fill_possible_tags_with_certainty_dict()
-        self.tag_possible_word_dict = self.fill_tag_possible_word_dict()
+        # self.tag_possible_word_dict = self.fill_tag_possible_word_dict()
+
         self.all_possible_tags_dict = dict()
         self.version = 1
         self.threshold = threshold
@@ -142,6 +152,53 @@ class FeatureStatistics:
 
         return tag_word_dict
 
+    def fill_rare_word_possible_tag_set(self, appearances):
+        rare_word_possible_tag_set = set()
+        for word, tag_count_dict in self.word_possible_tag_dict.items():
+            total_count = 0
+            for tag, tag_count in tag_count_dict.items():
+                total_count += tag_count
+
+            if total_count < appearances:
+                for t, _ in tag_count_dict.items():
+                    rare_word_possible_tag_set.add(t)
+        return rare_word_possible_tag_set
+
+    def fill_rare_word_set(self, appearances):
+        rare_word_set = set()
+        for word, tag_count_dict in self.word_possible_tag_dict.items():
+            total_count = 0
+            for tag, tag_count in tag_count_dict.items():
+                total_count += tag_count
+
+            if total_count < appearances:
+                rare_word_set.add(word)
+        return rare_word_set
+
+    def replace_rare_word_with_unk_in_hist(self):
+        hist_sentence_list_rare = []
+        for idx, sentence in enumerate(self.history_sentence_list):
+            sentence_hist_list = []
+            for hist in sentence:
+                new_hist = hist
+                # REPLACE ALL RARE WORDS IN HISTORY WITH UNKNOWN
+                if hist.cword in self.rare_word_set:
+                    new_hist = History(cword=UNKNOWN_WORD, pptag=hist.pptag, ptag=hist.ptag, ctag=hist.ctag,
+                                       nword=hist.nword, pword=hist.pword)
+
+                if hist.pword in self.rare_word_set:
+                    new_hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag, ctag=hist.ctag,
+                                       nword=hist.nword, pword=UNKNOWN_WORD)
+
+                if hist.nword in self.rare_word_set:
+                    new_hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag, ctag=hist.ctag,
+                                       nword=UNKNOWN_WORD, pword=hist.pword)
+
+                sentence_hist_list.append(new_hist)
+            hist_sentence_list_rare.append(sentence_hist_list)
+
+        self.history_sentence_list = hist_sentence_list_rare
+
     def print_num_features(self):
         print('\n\n\n')
         total_feature_count = []
@@ -239,6 +296,7 @@ class FeatureStatistics:
 
         hist_ft_dict_path = os.path.join('hist_feature_dict', f'th={self.threshold}')
         hist_dict_name = f'version={self.version}_threshold={self.threshold}'
+
         if fill_possible_tag_dict:
             self.fill_all_possible_tags_dict(hist_ft_dict_path, hist_dict_name)
         else:

@@ -2,9 +2,10 @@ import numpy as np
 import os
 import pickle
 from pre_processing import FeatureStatistics
-from features import History
+from utils import History
 from scipy.optimize import fmin_l_bfgs_b
 from utils import MIN_EXP_VAL, MIN_LOG_VAL, BASE_PROB
+import timeit
 np.seterr(all='raise')
 
 
@@ -46,6 +47,7 @@ class MaximumEntropyMarkovModel:
     @staticmethod
     def calc_normalization_term_exp_dict_prob_dict(v, all_possible_hist_feature_dict, sentence_history_list,
                                                    word_to_tags_set_dict, word_to_most_probable_tag_set):
+        starttime = timeit.default_timer()
         norm_term = 0.
         exp_dict = dict()
         prob_dict = dict()
@@ -83,20 +85,21 @@ class MaximumEntropyMarkovModel:
                             prob_dict[hist] = 1/len(cur_possible_hist_list)
                         else:
                             # prob_dict[hist] = np.float128(exp_dict[hist] / norm_i)
-                            prob_dict[hist] = np.float64(exp_dict[hist] / norm_i)
-                        # except:
-                        #     print(f'cword: {hist.cword}')
-                        #     print(f'cur tag set: {tag_set}')
-                        #     print(f'exp_dict[hist]: {exp_dict[hist]}')
-                        #     print(f'norm_i: {norm_i}')
-                        #     raise Exception
+                            try:
+                                prob_dict[hist] = np.float64(exp_dict[hist] / norm_i)
+                            except:
+                                print(f'cword: {hist.cword}')
+                                print(f'cur tag set: {tag_set}')
+                                print(f'exp_dict[hist]: {exp_dict[hist]}')
+                                print(f'norm_i: {norm_i}')
+                                raise Exception
 
                 # update normzliaztion term
                 if len(cur_possible_hist_list) == 1:
                     norm_term += np.sum(v[all_possible_hist_feature_dict[n_hist]]) #dot prod
                 else:
                     norm_term += np.log(norm_i)
-
+        print("execution time is :", timeit.default_timer() - starttime)
         return norm_term, prob_dict, exp_dict
 
     @staticmethod
