@@ -78,6 +78,8 @@ class Viterbi:
             assert len(cur_res) == len(sentence)
         # print(all_tagged_res_list)
         # print(f'total accuracy: {sum(all_acc_list)/len(all_acc_list)}')
+        print(f'precent of known words in corpus: {100 * len(all_right_tag_list_known)/len(all_right_tag_list)}')
+        print(f'precent of unknown words in corpus: {100 * len(all_right_tag_list_unknown) / len(all_right_tag_list)}')
         print(f'total accuracy: {self._calc_acc(all_right_tag_list)}')
         print(f'known words accuracy: {self._calc_acc(all_right_tag_list_known)}')
         print(f'unknown words accuracy: {self._calc_acc(all_right_tag_list_unknown)}')
