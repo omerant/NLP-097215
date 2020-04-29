@@ -7,7 +7,7 @@ import re
 
 
 MIN_EXP_VAL = -100
-MIN_LOG_VAL = 1/(10**40)
+MIN_LOG_VAL = 1/(10**60)
 
 def get_training_info(weights_path='weights'):
     weight_file_names = sorted(os.listdir(weights_path))

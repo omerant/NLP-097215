@@ -106,7 +106,6 @@ class Viterbi:
         w_first_upper = list(word)
         w_first_upper[0] = w_first_upper[0].upper()
         w_first_upper = ''.join(w_first_upper)
-
         if self.word_possible_tag_with_threshold_dict.get(word, None):
             tag_set = {self.word_possible_tag_with_threshold_dict[word][0]}
         elif self.word_possible_tag_with_threshold_dict.get(w_lower, None):
@@ -121,7 +120,9 @@ class Viterbi:
         elif self.word_possible_tag_set.get(w_first_upper, None):
             tag_set = self.word_possible_tag_set[w_first_upper]
         else:  # this is a new word
-            tag_set = self.tags_set - {'*'}
+            # tag_set = self.tags_set - {'*'}
+            tag_set = {'JJ', 'JJR', 'JJS'} | {'NN', 'NNS', 'NNP', 'NNPS'} \
+                      | {'RB', 'RBR', 'RBS'} | {'VB', 'VBD', 'VBG', 'VBN'}
         return tag_set
 
     @timeit
@@ -195,9 +196,9 @@ class Viterbi:
                         if res > max_pi_mul_q_val:
                             max_pi_mul_q_val = res
                             max_t_index = t_index
-                    if max_t_index == 10**3:
-                        print(f'CURRENT WORD: {cur_hist.cword}')
-                        raise Exception()
+                    # if max_t_index == 10**3:
+                    #     print(f'CURRENT WORD: {cur_hist.cword}')
+                    #     raise Exception()
                     # assert max_t_index != 10**3
                     # print(f'max index: {max_t_index}')
                     self.pi_tables[k, self.tag_to_index[u], self.tag_to_index[v]] = max_pi_mul_q_val
