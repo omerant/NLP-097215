@@ -80,19 +80,25 @@ class MaximumEntropyMarkovModel:
                     if len(cur_possible_hist_list) == 1:
                         prob_dict[hist] = 1
                     else:
-                        if np.isclose(norm_i, 0, rtol=BASE_PROB):
+                        if np.isclose(norm_i, 0):
                             # if norm_i is close to zero it means that each exponent is zero - uniform distribution
                             prob_dict[hist] = 1/len(cur_possible_hist_list)
                         else:
+                            exc = False
                             # prob_dict[hist] = np.float128(exp_dict[hist] / norm_i)
                             try:
                                 prob_dict[hist] = np.float64(exp_dict[hist] / norm_i)
                             except:
+                                exc = True
                                 print(f'cword: {hist.cword}')
                                 print(f'cur tag set: {tag_set}')
                                 print(f'exp_dict[hist]: {exp_dict[hist]}')
                                 print(f'norm_i: {norm_i}')
-                                raise Exception
+                                # raise Exception
+                                if exc:
+                                    for hist in cur_possible_hist_list:
+                                        prob_dict[hist] = 1 / len(cur_possible_hist_list)
+                                    break
 
                 # update normzliaztion term
                 if len(cur_possible_hist_list) == 1:

@@ -10,7 +10,7 @@ from utils import History, UNKNOWN_WORD
 
 
 class FeatureStatistics:
-    def __init__(self, input_file_path, threshold=3, rare_word_num_appearence_th=3):
+    def __init__(self, input_file_path, threshold=3, rare_word_num_appearence_th=2):
         self.file_path = input_file_path
         self.history_sentence_list = self.fill_ordered_history_list(self.file_path)
         self.num_sentences = len(self.history_sentence_list)
