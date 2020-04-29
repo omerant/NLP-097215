@@ -2,7 +2,7 @@ import numpy as np
 import pickle
 import os
 from features import History
-from utils import timeit, MIN_EXP_VAL, MIN_LOG_VAL
+from utils import timeit, MIN_EXP_VAL, MIN_LOG_VAL, BASE_PROB
 
 
 class Viterbi:
@@ -158,14 +158,11 @@ class Viterbi:
                             if len(cur_possible_hist_list) == 1:
                                 self.prob_dict[hist] = 1
                             else:
-                                try:
+                                if np.isclose(norm_i, 0, rtol=BASE_PROB):
+                                    self.prob_dict[hist] = 1 / len(cur_possible_hist_list)
+                                else:
                                     self.prob_dict[hist] = np.float64(self.exp_dict[hist] / norm_i)
-                                except:
-                                    print(f'cword: {hist.cword}')
-                                    print(f'cur tag set: {ctag_set}')
-                                    print(f'self.exp_dict[hist]: {self.exp_dict[hist]}')
-                                    print(f'norm_i: {norm_i}')
-                                    raise Exception
+
             pptag_set = ptag_set
             ptag_set = ctag_set
 

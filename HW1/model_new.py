@@ -4,7 +4,7 @@ import pickle
 from pre_processing import FeatureStatistics
 from features import History
 from scipy.optimize import fmin_l_bfgs_b
-from utils import MIN_EXP_VAL, MIN_LOG_VAL
+from utils import MIN_EXP_VAL, MIN_LOG_VAL, BASE_PROB
 np.seterr(all='raise')
 
 
@@ -78,15 +78,18 @@ class MaximumEntropyMarkovModel:
                     if len(cur_possible_hist_list) == 1:
                         prob_dict[hist] = 1
                     else:
-                        try:
+                        if np.isclose(norm_i, 0, rtol=BASE_PROB):
+                            # if norm_i is close to zero it means that each exponent is zero - uniform distribution
+                            prob_dict[hist] = 1/len(cur_possible_hist_list)
+                        else:
                             # prob_dict[hist] = np.float128(exp_dict[hist] / norm_i)
                             prob_dict[hist] = np.float64(exp_dict[hist] / norm_i)
-                        except:
-                            print(f'cword: {hist.cword}')
-                            print(f'cur tag set: {tag_set}')
-                            print(f'exp_dict[hist]: {exp_dict[hist]}')
-                            print(f'norm_i: {norm_i}')
-                            raise Exception
+                        # except:
+                        #     print(f'cword: {hist.cword}')
+                        #     print(f'cur tag set: {tag_set}')
+                        #     print(f'exp_dict[hist]: {exp_dict[hist]}')
+                        #     print(f'norm_i: {norm_i}')
+                        #     raise Exception
 
                 # update normzliaztion term
                 if len(cur_possible_hist_list) == 1:
