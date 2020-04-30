@@ -65,7 +65,8 @@ class MaximumEntropyMarkovModel:
                     n_hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag,
                                      nword=hist.nword, pword=hist.pword, ctag=tag,
                                      nnword=hist.nnword, ppword=hist.ppword)
-
+                    if n_hist.nnword == 'commuters':
+                        print('commuters')
                     if not exp_dict.get(n_hist, None):
                         dot_prod = np.sum(v[all_possible_hist_feature_dict[n_hist]])
                         # exp_dict[n_hist] = np.exp(dot_prod).astype(np.float128)

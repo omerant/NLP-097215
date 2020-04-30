@@ -18,10 +18,10 @@ class FeatureStatistics:
         # REPLACE RARE WORDS WITH UNK
         # self.rare_word_possible_tag_set = self.fill_rare_word_possible_tag_set(appearances=rare_word_num_appearence)
         self.word_possible_tag_dict = self.fill_word_possible_tag_dict()
-        self.rare_word_set = self.fill_rare_word_set(appearances=rare_word_num_appearence_th)
-        self.replace_rare_word_with_unk_in_hist()
+        self.rare_word_set, self.common_word_set = self.fill_rare_word_set(appearances=rare_word_num_appearence_th)
+        # self.replace_rare_word_with_unk_in_hist()
         # call again to replace with UNK
-        self.word_possible_tag_dict = self.fill_word_possible_tag_dict()
+        # self.word_possible_tag_dict = self.fill_word_possible_tag_dict()
         self.tags_set = self.fill_tags_set()
 
         self.word_possible_tag_set = self.fill_word_possible_tag_set()
@@ -41,11 +41,11 @@ class FeatureStatistics:
         self.fd_word_tag = ft.WordsTagsCountDict()
         # fill dict for each prefix len
         for i in range(1, 7):
-            setattr(self, 'fd_words_prefix'+str(i), ft.WordsPrefixTagsCountDict(i))
+            setattr(self, 'fd_words_prefix'+str(i), ft.WordsPrefixTagsCountDict(i, self.common_word_set))
 
         # fill dict for each suffix len
         for i in range(1, 7):
-            setattr(self, 'fd_words_suffix'+str(i), ft.WordsSuffixTagsCountDict(i))
+            setattr(self, 'fd_words_suffix'+str(i), ft.WordsSuffixTagsCountDict(i, self.common_word_set))
 
         self.fd_pword_ctag = ft.PrevWordCurrTagCountDict()
         self.fd_nword_ctag = ft.NextWordCurrTagCountDict()
@@ -53,23 +53,24 @@ class FeatureStatistics:
         self.fd_nnword_ctag = ft.DoubleNextWordCurrTagCountDict()
         self.fd_ctag_pptag = ft.SkipBigramCountDict()
         # letters digits
-        self.fd_has_first_capital_letter = ft.HasFirstCapitalLetterDict()
-        self.fd_has_all_capital_letters = ft.HasAllCapitalLettersDict()
-        self.fd_has_digit = ft.HasDigitDict()
-        self.fd_has_only_digits = ft.HasOnlyDigitDict()
-        self.fd_contains_letter = ft.ContainsLetterDict()
-        self.fd_has_only_letters = ft.ContainsOnlyLettersDict()
-        self.fd_contains_hyphen = ft.ContainsHyphenDict()
+        self.fd_has_first_capital_letter = ft.HasFirstCapitalLetterDict(self.common_word_set)
+        self.fd_has_all_capital_letters = ft.HasAllCapitalLettersDict(self.common_word_set)
+        self.fd_has_digit = ft.HasDigitDict(self.common_word_set)
+        self.fd_has_only_digits = ft.HasOnlyDigitDict(self.common_word_set)
+        self.fd_contains_letter = ft.ContainsLetterDict(self.common_word_set)
+        self.fd_has_only_letters = ft.ContainsOnlyLettersDict(self.common_word_set)
+        self.fd_contains_hyphen = ft.ContainsHyphenDict(self.common_word_set)
         # first last
-        self.fd_is_first_word = ft.IsFirstWordDict()
-        self.fd_is_lat_word = ft.IsLastWordDict()
+        self.fd_is_first_word = ft.IsFirstWordDict(self.common_word_set)
+        self.fd_is_lat_word = ft.IsLastWordDict(self.common_word_set)
         # symbols
         self.fd_has_symbol = ft.ContainsSymbolDict()
-        self.fd_all_symbol = ft.ContainsOnlySymbolsDict()
+        self.fd_all_symbol = ft.ContainsOnlySymbolsDict(self.common_word_set)
 
         # #word length
         # for i in range(1, 14):
         #     setattr(self, 'fd_word_length'+str(i), ft.WordsLengthDict(i))
+        self.fd_two_tags_one_word = ft.TwoPreviousTagsAndCurrentWord()
 
     @staticmethod
     def fill_ordered_history_list(file_path):
@@ -175,6 +176,7 @@ class FeatureStatistics:
 
     def fill_rare_word_set(self, appearances):
         rare_word_set = set()
+        common_word_set=set()
         for word, tag_count_dict in self.word_possible_tag_dict.items():
             total_count = 0
             for tag, tag_count in tag_count_dict.items():
@@ -182,7 +184,9 @@ class FeatureStatistics:
 
             if total_count < appearances:
                 rare_word_set.add(word)
-        return rare_word_set
+            else:
+                common_word_set.add(word)
+        return rare_word_set, common_word_set
 
     def replace_rare_word_with_unk_in_hist(self):
         hist_sentence_list_rare = []

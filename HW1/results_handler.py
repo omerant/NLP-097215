@@ -13,7 +13,7 @@ from re import split
 class ResultsHandler:
     def __init__(self):
         self.res_path = 'res'
-        self.dump_name = 'test1'
+        self.dump_name = 'test1_10_10.0'
         self.cf_name = 'cf'
 
     def get_res(self):
