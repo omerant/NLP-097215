@@ -81,7 +81,7 @@ class MaximumEntropyMarkovModel:
                         prob_dict[hist] = 1
                     else:
                         if np.isclose(norm_i, 0):
-                            # if norm_i is close to zero it means that each exponent is zero - uniform distribution
+                            # if norm_i is close to zero it means that each exponent is zero - make uniform distribution
                             prob_dict[hist] = 1/len(cur_possible_hist_list)
                         else:
                             exc = False

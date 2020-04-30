@@ -35,6 +35,7 @@ class FeatureStatistics:
 
         # Init all features dictionaries - each feature dict's name should start with fd
         # fill dict for 1-3 ngrams
+        # TODO: add other contextual features - for example (w_i-1, t_i), (w_i-2, t_i)
         self.fd_trigram_tags = ft.TrigramTagsCountDict()
         self.fd_bigram_tags = ft.BigramTagsCountDict()
         self.fd_unigram_tags = ft.UnigramTagsCountDict()
@@ -264,6 +265,7 @@ class FeatureStatistics:
         filter_dict = partial(self._filter_dict, threshold=self.threshold)
         feature_dicts = sorted([attr for attr in dir(self) if attr.startswith('fd')])
         for fd_name in feature_dicts:
+            # TODO: dont filter feature that look at current word as in paper
             fd = getattr(self, fd_name)
             fd.dict = filter_dict(fd.dict)
 
@@ -273,6 +275,7 @@ class FeatureStatistics:
         start_idx = 0
         for fd_name in feature_dicts:
             fd = getattr(self, fd_name)
+            # TODO: if rare prefix, suffix, digit, upper and hyphen
             idx_in_dict, val = fd.get_feature_index_and_count_from_history(history)
             # there is a feature in dict for this history
             if idx_in_dict != -1:
