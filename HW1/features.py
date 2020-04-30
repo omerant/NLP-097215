@@ -534,6 +534,11 @@ class ContainsOnlySymbolsDict(FeatureDict):
         return 0, self.dict.get(self.dict_key, 0)
 
 
+# s_d = ContainsOnlySymbolsDict(common_word_set={})
+# hist = History(cword='#$!', pptag=None, ppword=None, ptag=None, ctag=None, nword=None, pword=None, nnword=None)
+# idx, k = s_d.get_feature_index_and_count_from_history(hist)
+# print(f'idx: {idx}')
+
 class WordsLengthDict(FeatureDict):
     def __init__(self, len):
         super().__init__()
@@ -558,6 +563,7 @@ class WordsLengthDict(FeatureDict):
         if len(cur_word) != self.len:
             return self.INVALID_IDX, self.INVALID_VAL
         return 0, self.dict.get(self.dict_key, 0)
+
 
 class TwoPreviousTagsAndCurrentWord(FeatureDict):
     def __init__(self):

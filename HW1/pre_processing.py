@@ -11,6 +11,8 @@ from utils import History, UNKNOWN_WORD
 
 class FeatureStatistics:
     def __init__(self, input_file_path, threshold=3, rare_word_num_appearence_th=2):
+        #TODO: try higher rare_word_num_appearence_th
+        rare_word_num_appearence_th = 3
         self.file_path = input_file_path
         self.history_sentence_list = self.fill_ordered_history_list(self.file_path)
         self.num_sentences = len(self.history_sentence_list)
@@ -21,7 +23,6 @@ class FeatureStatistics:
         self.rare_word_set, self.common_word_set = self.fill_rare_word_set(appearances=rare_word_num_appearence_th)
         # self.replace_rare_word_with_unk_in_hist()
         # call again to replace with UNK
-        # self.word_possible_tag_dict = self.fill_word_possible_tag_dict()
         self.tags_set = self.fill_tags_set()
 
         self.word_possible_tag_set = self.fill_word_possible_tag_set()
@@ -40,11 +41,11 @@ class FeatureStatistics:
         self.fd_unigram_tags = ft.UnigramTagsCountDict()
         self.fd_word_tag = ft.WordsTagsCountDict()
         # fill dict for each prefix len
-        for i in range(1, 7):
+        for i in range(1, 5):
             setattr(self, 'fd_words_prefix'+str(i), ft.WordsPrefixTagsCountDict(i, self.common_word_set))
 
         # fill dict for each suffix len
-        for i in range(1, 7):
+        for i in range(1, 5):
             setattr(self, 'fd_words_suffix'+str(i), ft.WordsSuffixTagsCountDict(i, self.common_word_set))
 
         self.fd_pword_ctag = ft.PrevWordCurrTagCountDict()
@@ -286,7 +287,10 @@ class FeatureStatistics:
         feature_dicts = sorted([attr for attr in dir(self) if attr.startswith('fd')])
         for fd_name in feature_dicts:
             fd = getattr(self, fd_name)
-            fd.dict = filter_dict(fd.dict)
+            if fd_name != 'fd_word_tag':
+                fd.dict = filter_dict(fd.dict)
+            else:
+                pass
 
     def get_non_zero_sparse_feature_vec_indices_from_history(self, history: ft.History):
         sparse_feature_vec = OrderedDict()

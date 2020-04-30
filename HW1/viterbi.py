@@ -81,7 +81,7 @@ class Viterbi:
         print(f'total accuracy: {self._calc_acc(all_right_tag_list)}')
         print(f'known words accuracy: {self._calc_acc(all_right_tag_list_known)}')
         print(f'unknown words accuracy: {self._calc_acc(all_right_tag_list_unknown)}')
-        self.dump_res(all_tagged_res_list, all_gt_tags, all_res_tags)
+        self.dump_res(all_tagged_res_list, all_gt_tags, all_res_tags, self.sentence_list)
         return all_res_tags, all_acc_list
 
     @staticmethod
@@ -107,12 +107,12 @@ class Viterbi:
         elif self.word_possible_tag_set.get(word, None):
             tag_set = self.word_possible_tag_set[word]
 
-        else: tag_set = self.tags_set
+        else:
+            tag_set = self.tags_set
 
         return tag_set
 
     # def calc_tag_set_for_unknown(self, hist):
-
 
     @timeit
     def fill_prob_dict_from_sentence(self, sentence):
@@ -261,11 +261,11 @@ class Viterbi:
         res_tags = self.calc_res_tags(sentence)
         return res_tags
 
-    def dump_res(self, all_tagged_res_list, all_gt_tags, all_res_tags):
+    def dump_res(self, all_tagged_res_list, all_gt_tags, all_res_tags, sentence_list):
         if not os.path.isdir(self.res_path):
             os.makedirs(self.res_path)
         dump_name = self.dump_name + '_' + str(self.threshold) + '_' + str(self.reg_lambda)
         dump_path = os.path.join(self.res_path, dump_name)
         with open(dump_path, 'wb') as f:
-            res = (all_tagged_res_list, all_gt_tags, all_res_tags)
+            res = (all_tagged_res_list, all_gt_tags, all_res_tags, sentence_list)
             pickle.dump(res, f)
