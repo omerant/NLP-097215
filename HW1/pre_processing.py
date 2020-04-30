@@ -49,6 +49,8 @@ class FeatureStatistics:
 
         self.fd_pword_ctag = ft.PrevWordCurrTagCountDict()
         self.fd_nword_ctag = ft.NextWordCurrTagCountDict()
+        self.fd_ppword_ctag = ft.DoublePrevWordCurrTagCountDict()
+        self.fd_nnword_ctag = ft.DoubleNextWordCurrTagCountDict()
         self.fd_ctag_pptag = ft.SkipBigramCountDict()
         # letters digits
         self.fd_has_first_capital_letter = ft.HasFirstCapitalLetterDict()
@@ -84,19 +86,26 @@ class FeatureStatistics:
                         pword = WordAndTagConstants.PWORD_SENTENCE_BEGINNING
                         ptag = WordAndTagConstants.PTAG_SENTENCE_BEGINNING
                         pptag = WordAndTagConstants.PPTAG_SENTENCE_BEGINNING
-
+                        ppword = WordAndTagConstants.PPWORD_SENTENCE_BEGINNING
                     else:
                         prev_hist_idx = word_idx - 1
                         pword = new_sentence_hist_list[prev_hist_idx].cword
                         ptag = new_sentence_hist_list[prev_hist_idx].ctag
                         pptag = new_sentence_hist_list[prev_hist_idx].ptag
+                        ppword = new_sentence_hist_list[prev_hist_idx].pword
 
                     # check if last in sentence
-                    if word_idx + 1 < len(splited_words):
+                    if word_idx + 2 < len(splited_words):
                         nword, _ = split('_', splited_words[word_idx+1])
+                        nnword, _ = split('_', splited_words[word_idx+2])
+                    elif word_idx + 1 < len(splited_words):
+                        nword, _ = split('_', splited_words[word_idx+1])
+                        nnword = WordAndTagConstants.NWORD_SENTENCE_END
                     else:
                         nword = WordAndTagConstants.NWORD_SENTENCE_END
-                    cur_hist = History(cword=cword, pptag=pptag, ptag=ptag, ctag=ctag, nword=nword, pword=pword)
+                        nnword = WordAndTagConstants.NNWORD_SENTENCE_END
+                    cur_hist = History(cword=cword, pptag=pptag, ptag=ptag, ctag=ctag, nword=nword, pword=pword,
+                                       ppword=ppword, nnword=nnword)
                     new_sentence_hist_list.append(cur_hist)
                 hist_sentence_list.append(new_sentence_hist_list)
         return hist_sentence_list
@@ -184,16 +193,23 @@ class FeatureStatistics:
                 # REPLACE ALL RARE WORDS IN HISTORY WITH UNKNOWN
                 if hist.cword in self.rare_word_set:
                     new_hist = History(cword=UNKNOWN_WORD, pptag=hist.pptag, ptag=hist.ptag, ctag=hist.ctag,
-                                       nword=hist.nword, pword=hist.pword)
+                                       nword=hist.nword, pword=hist.pword, ppword=hist.ppword, nnword=hist.nnword)
 
                 if hist.pword in self.rare_word_set:
                     new_hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag, ctag=hist.ctag,
-                                       nword=hist.nword, pword=UNKNOWN_WORD)
+                                       nword=hist.nword, pword=UNKNOWN_WORD, ppword=hist.ppword, nnword=hist.nnword)
 
                 if hist.nword in self.rare_word_set:
                     new_hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag, ctag=hist.ctag,
-                                       nword=UNKNOWN_WORD, pword=hist.pword)
+                                       nword=UNKNOWN_WORD, pword=hist.pword, ppword=hist.ppword, nnword=hist.nnword)
 
+                if hist.ppword in self.rare_word_set:
+                    new_hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag, ctag=hist.ctag,
+                                       nword=hist.nword, pword=hist.pword, ppword=UNKNOWN_WORD, nnword=hist.nnword)
+
+                if hist.nnword in self.rare_word_set:
+                    new_hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag, ctag=hist.ctag,
+                                       nword=hist.nword, pword=hist.pword, ppword=hist.ppword, nnword=UNKNOWN_WORD)
                 sentence_hist_list.append(new_hist)
             hist_sentence_list_rare.append(sentence_hist_list)
 
@@ -222,7 +238,8 @@ class FeatureStatistics:
                 tag_set = self.word_possible_tag_set[hist.cword]
                 for ctag in tag_set:
                     new_hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag,
-                                       ctag=ctag, nword=hist.nword, pword=hist.pword)
+                                       ctag=ctag, nword=hist.nword, pword=hist.pword,
+                                       nnword=hist.nnword, ppword=hist.ppword)
                     if not self.all_possible_tags_dict.get(new_hist, None):
                         self.all_possible_tags_dict[new_hist] = self.get_non_zero_sparse_feature_vec_indices_from_history(new_hist)
         if not os.path.isdir(hist_ft_dict_path):

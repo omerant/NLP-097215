@@ -122,15 +122,23 @@ class Viterbi:
 
             if not self.word_possible_tag_set.get(hist.cword, None):
                 hist = History(cword=UNKNOWN_WORD, pptag=hist.pptag, ptag=hist.ptag, ctag=hist.ctag,
-                               nword=hist.nword, pword=hist.pword)
+                               nword=hist.nword, pword=hist.pword, nnword=hist.nnword, ppword=hist.ppword)
 
             if not self.word_possible_tag_set.get(hist.pword, None):
                 hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag, ctag=hist.ctag,
-                               nword=hist.nword, pword=UNKNOWN_WORD)
+                               nword=hist.nword, pword=UNKNOWN_WORD, nnword=hist.nnword, ppword=hist.ppword)
 
             if not self.word_possible_tag_set.get(hist.nword, None):
                 hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag, ctag=hist.ctag,
-                               nword=UNKNOWN_WORD, pword=hist.pword)
+                               nword=UNKNOWN_WORD, pword=hist.pword, nnword=hist.nnword, ppword=hist.ppword)
+
+            if not self.word_possible_tag_set.get(hist.ppword, None):
+                hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag, ctag=hist.ctag,
+                               nword=hist.nword, pword=hist.pword, nnword=hist.nnword, ppword=UNKNOWN_WORD)
+
+            if not self.word_possible_tag_set.get(hist.nnword, None):
+                hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag, ctag=hist.ctag,
+                               nword=hist.nword, pword=hist.pword, nnword=UNKNOWN_WORD, ppword=hist.ppword)
 
             ctag_set = self.get_possible_tag_set_from_word(hist.cword)
             for pptag in pptag_set:
@@ -139,7 +147,8 @@ class Viterbi:
                     cur_possible_hist_list = []
                     for c_tag in ctag_set:
                         n_hist = History(cword=hist.cword, pptag=pptag, ptag=ptag,
-                                         nword=hist.nword, pword=hist.pword, ctag=c_tag)
+                                         nword=hist.nword, pword=hist.pword, ctag=c_tag,
+                                         nnword=hist.nnword, ppword=hist.ppword)
                         if not self.prob_dict.get(n_hist, None):
                             if not self.all_possible_tags_dict.get(n_hist, None):
                                 self.all_possible_tags_dict[n_hist] = self.get_feature_from_hist(n_hist)
@@ -174,15 +183,28 @@ class Viterbi:
 
             if not self.word_possible_tag_set.get(cur_hist.cword, None):
                 cur_hist = History(cword=UNKNOWN_WORD, pptag=cur_hist.pptag, ptag=cur_hist.ptag, ctag=cur_hist.ctag,
-                                   nword=cur_hist.nword, pword=cur_hist.pword)
+                                   nword=cur_hist.nword, pword=cur_hist.pword,
+                                   nnword=cur_hist.nnword, ppword=cur_hist.ppword)
 
             if not self.word_possible_tag_set.get(cur_hist.pword, None):
                 cur_hist = History(cword=cur_hist.cword, pptag=cur_hist.pptag, ptag=cur_hist.ptag, ctag=cur_hist.ctag,
-                                   nword=cur_hist.nword, pword=UNKNOWN_WORD)
+                                   nword=cur_hist.nword, pword=UNKNOWN_WORD,
+                                   nnword=cur_hist.nnword, ppword=cur_hist.ppword)
 
             if not self.word_possible_tag_set.get(cur_hist.nword, None):
                 cur_hist = History(cword=cur_hist.cword, pptag=cur_hist.pptag, ptag=cur_hist.ptag, ctag=cur_hist.ctag,
-                                   nword=UNKNOWN_WORD, pword=cur_hist.pword)
+                                   nword=UNKNOWN_WORD, pword=cur_hist.pword,
+                                   nnword=cur_hist.nnword, ppword=cur_hist.ppword)
+
+            if not self.word_possible_tag_set.get(cur_hist.ppword, None):
+                cur_hist = History(cword=cur_hist.cword, pptag=cur_hist.pptag, ptag=cur_hist.ptag, ctag=cur_hist.ctag,
+                                   nword=cur_hist.nword, pword=cur_hist.pword,
+                                   nnword=cur_hist.nnword, ppword=UNKNOWN_WORD)
+
+            if not self.word_possible_tag_set.get(cur_hist.nnword, None):
+                cur_hist = History(cword=cur_hist.cword, pptag=cur_hist.pptag, ptag=cur_hist.ptag, ctag=cur_hist.ctag,
+                                   nword=cur_hist.nword, pword=cur_hist.pword,
+                                   nnword=UNKNOWN_WORD, ppword=cur_hist.ppword)
             if ind == 0:
                 pp_tag_set = {'*'}
                 p_tag_set = {'*'}
@@ -196,7 +218,8 @@ class Viterbi:
                     for t in pp_tag_set:
                         t_index = self.tag_to_index[t]
                         new_hist = History(cword=cur_hist.cword, pptag=t, ptag=u,
-                                           ctag=v, nword=cur_hist.nword, pword=cur_hist.pword)
+                                           ctag=v, nword=cur_hist.nword, pword=cur_hist.pword,
+                                           nnword=cur_hist.nnword, ppword=cur_hist.ppword)
                         if self.prob_dict[new_hist] < MIN_LOG_VAL:
                             q = -np.inf
                         else:
