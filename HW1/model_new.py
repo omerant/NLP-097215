@@ -63,7 +63,8 @@ class MaximumEntropyMarkovModel:
                 # fill exp dict
                 for tag in tag_set:
                     n_hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag,
-                                     nword=hist.nword, pword=hist.pword, ctag=tag)
+                                     nword=hist.nword, pword=hist.pword, ctag=tag,
+                                     nnword=hist.nnword, ppword=hist.ppword)
 
                     if not exp_dict.get(n_hist, None):
                         dot_prod = np.sum(v[all_possible_hist_feature_dict[n_hist]])
@@ -120,7 +121,8 @@ class MaximumEntropyMarkovModel:
                     tag_set = word_to_tags_set_dict[hist.cword]
                 for tag in tag_set:
                     n_hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag,
-                                     ctag=tag, nword=hist.nword, pword=hist.pword)
+                                     ctag=tag, nword=hist.nword, pword=hist.pword,
+                                     nnword=hist.nnword, ppword=hist.ppword)
                     expected_counts[all_possible_hist_feature_dict[n_hist]] += 1 * prob_dict[n_hist]
 
         return expected_counts

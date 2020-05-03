@@ -10,6 +10,8 @@ class WordAndTagConstants:
     PPTAG_SENTENCE_BEGINNING = '**'
     PWORD_SENTENCE_BEGINNING = '&&'
     NWORD_SENTENCE_END = '&&&'
+    PPWORD_SENTENCE_BEGINNING = '^^'
+    NNWORD_SENTENCE_END = '^^^'
 
 
 class FeatureDict(ABC):
@@ -197,6 +199,24 @@ class PrevWordCurrTagCountDict(FeatureDict):
         key = (history.pword, history.ctag)
         return self.get_key_index(key)
 
+class DoublePrevWordCurrTagCountDict(FeatureDict):
+    def __init__(self):
+        super().__init__()
+
+    def fill_dict(self, hist_sentence_list: [[History]]):
+        """
+            Extract out of text all word/tag pairs - <w_i-2, t_i>
+            fill all word/tag pairs with index of appearance
+        """
+        for sentence in hist_sentence_list:
+            for hist in sentence:
+                cur_tag = hist.ctag
+                double_prev_word = hist.ppword
+                self.insert_key((double_prev_word, cur_tag))
+
+    def get_feature_index_and_count_from_history(self, history: History):
+        key = (history.ppword, history.ctag)
+        return self.get_key_index(key)
 
 class NextWordCurrTagCountDict(FeatureDict):
     def __init__(self):
@@ -215,6 +235,25 @@ class NextWordCurrTagCountDict(FeatureDict):
 
     def get_feature_index_and_count_from_history(self, history: History):
         key = (history.nword, history.ctag)
+        return self.get_key_index(key)
+
+class DoubleNextWordCurrTagCountDict(FeatureDict):
+    def __init__(self):
+        super().__init__()
+
+    def fill_dict(self, hist_sentence_list: [[History]]):
+        """
+            Extract out of text all word/tag pairs - <w_i+2, t_i>
+            fill all word/tag pairs with index of appearance
+        """
+        for sentence in hist_sentence_list:
+            for hist in sentence:
+                cur_tag = hist.ctag
+                double_next_word = hist.nnword
+                self.insert_key((double_next_word, cur_tag))
+
+    def get_feature_index_and_count_from_history(self, history: History):
+        key = (history.nnword, history.ctag)
         return self.get_key_index(key)
 
 
@@ -516,4 +555,23 @@ class WordsLengthDict(FeatureDict):
         if len(cur_word) != self.len:
             return self.INVALID_IDX, self.INVALID_VAL
         return 0, self.dict.get(self.dict_key, 0)
+
+
+class TwoPreviousTagsAndCurrentWord(FeatureDict):
+    def __init__(self):
+        super().__init__()
+
+    def fill_dict(self, hist_sentence_list: [[History]]):
+        """
+            Extract out of text ordered two previous tags and current word - <t_i-2, t_i-1, w_i>
+            fill all ordered tag triplets with index of appearance
+        """
+        for sentence in hist_sentence_list:
+            for hist in sentence:
+                cur_triplet = (hist.pptag, hist.ptag, hist.cword)
+                self.insert_key(cur_triplet)
+
+    def get_feature_index_and_count_from_history(self, history: History):
+        key = (history.pptag, history.ptag, history.cword)
+        return self.get_key_index(key)
 

@@ -13,13 +13,13 @@ from re import split
 class ResultsHandler:
     def __init__(self):
         self.res_path = 'res'
-        self.dump_name = 'test1'
+        self.dump_name = 'test1_10_10.0'
         self.cf_name = 'cf'
 
     def get_res(self):
         dump_path = os.path.join(self.res_path, self.dump_name)
         with open(dump_path, 'rb') as f:
-            self.all_tagged_res_list, self.all_gt_tags, self.all_res_tags = pickle.load(f)
+            self.all_tagged_res_list, self.all_gt_tags, self.all_res_tags, self.sentence_list = pickle.load(f)
         self.process_results()
 
     def process_results(self):

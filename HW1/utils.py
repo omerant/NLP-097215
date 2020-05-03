@@ -10,7 +10,7 @@ MIN_EXP_VAL = -100
 MIN_LOG_VAL = 1/(10**60)
 BASE_PROB = 1/(10**19)
 
-History = namedtuple('History', 'cword, pptag, ptag, ctag, nword, pword')
+History = namedtuple('History', 'cword, pptag, ptag, ctag, nword, pword, nnword, ppword')
 Symbols = """!#$%&?/\|}{~:;.,'`-]"""
 STR_CHECK_SYMBOL = re.compile(Symbols)
 UNKNOWN_WORD = 'UNK'
