@@ -21,6 +21,7 @@ class FeatureStatistics:
         # self.rare_word_possible_tag_set = self.fill_rare_word_possible_tag_set(appearances=rare_word_num_appearence)
         self.word_possible_tag_dict = self.fill_word_possible_tag_dict()
         self.rare_word_set, self.common_word_set = self.fill_rare_word_set(appearances=rare_word_num_appearence_th)
+        self.rare_words_tags = self.rare_words_possible_tags()
         # self.replace_rare_word_with_unk_in_hist()
         # call again to replace with UNK
         self.tags_set = self.fill_tags_set()
@@ -42,31 +43,31 @@ class FeatureStatistics:
         self.fd_word_tag = ft.WordsTagsCountDict()
         # fill dict for each prefix len
         for i in range(1, 5):
-            setattr(self, 'fd_words_prefix'+str(i), ft.WordsPrefixTagsCountDict(i, self.common_word_set))
+            setattr(self, 'fd_words_prefix'+str(i), ft.WordsPrefixTagsCountDict(i))
 
         # fill dict for each suffix len
         for i in range(1, 5):
-            setattr(self, 'fd_words_suffix'+str(i), ft.WordsSuffixTagsCountDict(i, self.common_word_set))
+            setattr(self, 'fd_words_suffix'+str(i), ft.WordsSuffixTagsCountDict(i))
 
         self.fd_pword_ctag = ft.PrevWordCurrTagCountDict()
         self.fd_nword_ctag = ft.NextWordCurrTagCountDict()
         self.fd_ppword_ctag = ft.DoublePrevWordCurrTagCountDict()
         self.fd_nnword_ctag = ft.DoubleNextWordCurrTagCountDict()
-        self.fd_ctag_pptag = ft.SkipBigramCountDict()
+        # self.fd_ctag_pptag = ft.SkipBigramCountDict()
         # letters digits
-        self.fd_has_first_capital_letter = ft.HasFirstCapitalLetterDict(self.common_word_set)
-        self.fd_has_all_capital_letters = ft.HasAllCapitalLettersDict(self.common_word_set)
-        self.fd_has_digit = ft.HasDigitDict(self.common_word_set)
-        self.fd_has_only_digits = ft.HasOnlyDigitDict(self.common_word_set)
-        self.fd_contains_letter = ft.ContainsLetterDict(self.common_word_set)
-        self.fd_has_only_letters = ft.ContainsOnlyLettersDict(self.common_word_set)
-        self.fd_contains_hyphen = ft.ContainsHyphenDict(self.common_word_set)
+        self.fd_has_first_capital_letter = ft.HasFirstCapitalLetterDict()
+        self.fd_has_all_capital_letters = ft.HasAllCapitalLettersDict()
+        self.fd_has_digit = ft.HasDigitDict()
+        self.fd_has_only_digits = ft.HasOnlyDigitDict()
+        # self.fd_contains_letter = ft.ContainsLetterDict(self.common_word_set)
+        # self.fd_has_only_letters = ft.ContainsOnlyLettersDict(self.common_word_set)
+        self.fd_contains_hyphen = ft.ContainsHyphenDict()
         # first last
-        self.fd_is_first_word = ft.IsFirstWordDict(self.common_word_set)
-        self.fd_is_lat_word = ft.IsLastWordDict(self.common_word_set)
+        # self.fd_is_first_word = ft.IsFirstWordDict(self.common_word_set)
+        # self.fd_is_lat_word = ft.IsLastWordDict(self.common_word_set)
         # symbols
         self.fd_has_symbol = ft.ContainsSymbolDict()
-        self.fd_all_symbol = ft.ContainsOnlySymbolsDict(self.common_word_set)
+        self.fd_all_symbol = ft.ContainsOnlySymbolsDict()
 
         # #word length
         # for i in range(1, 14):
@@ -188,6 +189,12 @@ class FeatureStatistics:
             else:
                 common_word_set.add(word)
         return rare_word_set, common_word_set
+
+    def rare_words_possible_tags(self):
+        rare_words_tags=set()
+        for word in self.rare_word_set:
+            rare_words_tags.update(self.word_possible_tag_dict[word].keys())
+        return rare_words_tags
 
     def replace_rare_word_with_unk_in_hist(self):
         hist_sentence_list_rare = []

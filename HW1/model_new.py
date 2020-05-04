@@ -65,8 +65,6 @@ class MaximumEntropyMarkovModel:
                     n_hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag,
                                      nword=hist.nword, pword=hist.pword, ctag=tag,
                                      nnword=hist.nnword, ppword=hist.ppword)
-                    if n_hist.nnword == 'commuters':
-                        print('commuters')
                     if not exp_dict.get(n_hist, None):
                         dot_prod = np.sum(v[all_possible_hist_feature_dict[n_hist]])
                         # exp_dict[n_hist] = np.exp(dot_prod).astype(np.float128)
@@ -138,7 +136,6 @@ class MaximumEntropyMarkovModel:
         word_to_tags_set_dict = args[5]
         word_to_most_probable_tag_set = args[6]
         linear_term = v.dot(empirical_counts)
-
         normalization_term, prob_dict, _ = MaximumEntropyMarkovModel.calc_normalization_term_exp_dict_prob_dict(
             v, all_possible_hist_feature_dict, sentence_history_list,
             word_to_tags_set_dict, word_to_most_probable_tag_set

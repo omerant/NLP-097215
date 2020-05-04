@@ -7,8 +7,8 @@ from utils import timeit, MIN_EXP_VAL, MIN_LOG_VAL, BASE_PROB, OpenClassTypes, U
 
 class Viterbi:
     def __init__(self, v, sentence_hist_list: [[History]], tags_set, all_possible_tags_dict,
-                 get_feature_from_hist, word_possible_tag_set, word_possible_tag_with_threshold_dict, prob_dict,
-                 exp_dict, threshold, reg_lambda):
+                 get_feature_from_hist, word_possible_tag_set, word_possible_tag_with_threshold_dict,
+                 rare_words_tags, prob_dict, exp_dict, threshold, reg_lambda):
         self.v = v
         self.sentence_list = sentence_hist_list
         tags_set.add('*')
@@ -17,6 +17,7 @@ class Viterbi:
         self.get_feature_from_hist = get_feature_from_hist
         self.word_possible_tag_set = word_possible_tag_set
         self.word_possible_tag_with_threshold_dict = word_possible_tag_with_threshold_dict
+        self.rare_words_tags = rare_words_tags
         tag_list = list(tags_set)
         self.tag_to_index = {tag_list[i]: i for i in range(len(tag_list))}
         self.index_to_tag = {v: k for k, v in self.tag_to_index.items()}
@@ -108,8 +109,8 @@ class Viterbi:
             tag_set = self.word_possible_tag_set[word]
 
         else:
-            tag_set = self.tags_set
-
+            # tag_set = self.tags_set
+            tag_set = self.rare_words_tags
         return tag_set
 
     # def calc_tag_set_for_unknown(self, hist):

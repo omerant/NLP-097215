@@ -44,7 +44,7 @@ def predict(train_path, threshold, reg_lambda, test_path):
     get_ft_from_hist_func = ft_statistics.get_non_zero_sparse_feature_vec_indices_from_history
     word_possible_tag_set = ft_statistics.word_possible_tag_set
     word_possible_tag_with_threshold_dict = ft_statistics.word_possible_tag_with_threshold_dict
-
+    rare_words_tags = ft_statistics.rare_words_tags
     _, prob_dict, exp_dict = MaximumEntropyMarkovModel.calc_normalization_term_exp_dict_prob_dict(
         v=v, all_possible_hist_feature_dict=all_possible_tags_dict,
         sentence_history_list=ft_statistics.history_sentence_list, word_to_tags_set_dict=word_possible_tag_set,
@@ -56,6 +56,7 @@ def predict(train_path, threshold, reg_lambda, test_path):
         all_possible_tags_dict=all_possible_tags_dict, get_feature_from_hist=get_ft_from_hist_func,
         word_possible_tag_set=word_possible_tag_set,
         word_possible_tag_with_threshold_dict=word_possible_tag_with_threshold_dict,
+        rare_words_tags=rare_words_tags,
         prob_dict=prob_dict,
         exp_dict=exp_dict,
         threshold=args.threshold,

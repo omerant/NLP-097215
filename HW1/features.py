@@ -122,10 +122,10 @@ class WordsTagsCountDict(FeatureDict):
 
 
 class WordsPrefixTagsCountDict(FeatureDict):
-    def __init__(self, pref_len, common_word_set):
+    def __init__(self, pref_len):
         super().__init__()
         self.pref_len = pref_len
-        self.common_word_set=common_word_set
+
     def fill_dict(self, hist_sentence_list: [[History]]):
         """
             Extract out of text all word_prefix/tag pairs for word_prefix| <=4 - <pref_w_i, t_i>
@@ -136,7 +136,7 @@ class WordsPrefixTagsCountDict(FeatureDict):
             for hist in sentence:
                 cur_word = hist.cword
                 cur_tag = hist.ctag
-                if len(cur_word) < self.pref_len or cur_word in self.common_word_set:
+                if len(cur_word) < self.pref_len:
                     continue
                 pref = cur_word[:self.pref_len]
                 self.insert_key((pref, cur_tag))
@@ -144,7 +144,7 @@ class WordsPrefixTagsCountDict(FeatureDict):
     def get_feature_index_and_count_from_history(self, history: History):
         cur_word = history.cword
         cur_tag = history.ctag
-        if len(cur_word) < self.pref_len or cur_word in self.common_word_set:
+        if len(cur_word) < self.pref_len:
             return self.INVALID_IDX, self.INVALID_VAL
         cur_pref = cur_word[:self.pref_len]
         key = (cur_pref, cur_tag)
@@ -152,10 +152,9 @@ class WordsPrefixTagsCountDict(FeatureDict):
 
 
 class WordsSuffixTagsCountDict(FeatureDict):
-    def __init__(self, suff_len, common_word_set):
+    def __init__(self, suff_len):
         super().__init__()
         self.suff_len = suff_len
-        self.common_word_set = common_word_set
 
     def fill_dict(self, hist_sentence_list: [[History]]):
         """
@@ -166,7 +165,7 @@ class WordsSuffixTagsCountDict(FeatureDict):
             for hist in sentence:
                 cur_word = hist.cword
                 cur_tag = hist.ctag
-                if len(cur_word) < self.suff_len or cur_word in self.common_word_set:
+                if len(cur_word) < self.suff_len:
                     continue
                 pref = cur_word[-self.suff_len:]
                 self.insert_key((pref, cur_tag))
@@ -174,7 +173,7 @@ class WordsSuffixTagsCountDict(FeatureDict):
     def get_feature_index_and_count_from_history(self, history: History):
         cur_word = history.cword
         cur_tag = history.ctag
-        if len(cur_word) < self.suff_len or cur_word in self.common_word_set:
+        if len(cur_word) < self.suff_len:
             return self.INVALID_IDX, self.INVALID_VAL
         cur_suff = cur_word[-self.suff_len:]
         key = (cur_suff, cur_tag)
@@ -279,10 +278,9 @@ class SkipBigramCountDict(FeatureDict):
 
 
 class HasFirstCapitalLetterDict(FeatureDict):
-    def __init__(self, common_word_set):
+    def __init__(self):
         super().__init__()
         self.dict_key = 'begins_with_capital_letter'
-        self.common_word_set = common_word_set
     def fill_dict(self, hist_sentence_list: [[History]]):
         """
             Extract out of text all words that contain first capital letters - <w_i | w_i has first capital letter>
@@ -291,21 +289,20 @@ class HasFirstCapitalLetterDict(FeatureDict):
         for sentence in hist_sentence_list:
             for hist in sentence:
                 cur_word = hist.cword
-                if bool(re.search(r'[A-Z]', cur_word[0])) and cur_word not in self.common_word_set:
+                if bool(re.search(r'[A-Z]', cur_word[0])):
                     self.insert_key(self.dict_key)
 
     def get_feature_index_and_count_from_history(self, history: History):
-        if bool(re.search(r'[A-Z]', history.cword[0])) and history.cword not in self.common_word_set:
+        if bool(re.search(r'[A-Z]', history.cword[0])):
             return 0, self.dict.get(self.dict_key, 0)
         else:
             return self.INVALID_IDX, self.INVALID_VAL
 
 
 class HasAllCapitalLettersDict(FeatureDict):
-    def __init__(self, common_word_set):
+    def __init__(self):
         super().__init__()
         self.dict_key = 'all_capital_letters'
-        self.common_word_set = common_word_set
     def fill_dict(self, hist_sentence_list: [[History]]):
         """
             Extract out of text all words that contain capital letters - <w_i | w_i contains capital letter>
@@ -314,21 +311,20 @@ class HasAllCapitalLettersDict(FeatureDict):
         for sentence in hist_sentence_list:
             for hist in sentence:
                 cur_word = hist.cword
-                if cur_word.upper() == cur_word and cur_word not in self.common_word_set:
+                if cur_word.upper() == cur_word:
                     self.insert_key(self.dict_key)
 
     def get_feature_index_and_count_from_history(self, history: History):
-        if history.cword == history.cword.upper() and history.cword not in self.common_word_set:
+        if history.cword == history.cword.upper():
             return 0, self.dict.get(self.dict_key, 0)
         else:
             return self.INVALID_IDX, self.INVALID_VAL
 
 
 class HasDigitDict(FeatureDict):
-    def __init__(self, common_word_set):
+    def __init__(self):
         super().__init__()
         self.dict_key = 'digit'
-        self.common_word_set = common_word_set
     def fill_dict(self, hist_sentence_list: [[History]]):
         """
             Extract out of text all words that contain digit - <w_i | w_i contains digit>
@@ -337,21 +333,20 @@ class HasDigitDict(FeatureDict):
         for sentence in hist_sentence_list:
             for hist in sentence:
                 cur_word = hist.cword
-                if bool(re.search(r'\d', cur_word)) and cur_word not in self.common_word_set:
+                if bool(re.search(r'\d', cur_word)):
                     self.insert_key(self.dict_key)
 
     def get_feature_index_and_count_from_history(self, history: History):
-        if bool(re.search(r'\d', history.cword)) and history.cword not in self.common_word_set:
+        if bool(re.search(r'\d', history.cword)):
             return 0, self.dict.get(self.dict_key, 0)
         else:
             return self.INVALID_IDX, self.INVALID_VAL
 
 
 class HasOnlyDigitDict(FeatureDict):
-    def __init__(self, common_word_set):
+    def __init__(self):
         super().__init__()
         self.dict_key = 'contains_only_digits'
-        self.common_word_set = common_word_set
     def fill_dict(self, hist_sentence_list: [[History]]):
         """
             Extract out of text all words have only digits - <w_i | w_i has only digits>
@@ -359,21 +354,20 @@ class HasOnlyDigitDict(FeatureDict):
         for sentence in hist_sentence_list:
             for hist in sentence:
                 cur_word = hist.cword
-                if utils.is_number(cur_word) and cur_word not in self.common_word_set:
+                if utils.is_number(cur_word):
                     self.insert_key(self.dict_key)
 
     def get_feature_index_and_count_from_history(self, history: History):
-        if utils.is_number(history.cword) and history.cword not in self.common_word_set:
+        if utils.is_number(history.cword):
             return 0, self.dict.get(self.dict_key, 0)
         else:
             return self.INVALID_IDX, self.INVALID_VAL
 
 
 class ContainsLetterDict(FeatureDict):
-    def __init__(self, common_word_set):
+    def __init__(self):
         super().__init__()
         self.dict_key = 'contains_letter'
-        self.common_word_set = common_word_set
     def fill_dict(self, hist_sentence_list: [[History]]):
         """
             Check if the word has letters
@@ -381,21 +375,20 @@ class ContainsLetterDict(FeatureDict):
         for sentence in hist_sentence_list:
             for hist in sentence:
                 cur_word = hist.cword
-                if bool(re.search(r'[a-zA-Z]', cur_word)) and cur_word not in self.common_word_set:
+                if bool(re.search(r'[a-zA-Z]', cur_word)):
                     self.insert_key(self.dict_key)
 
     def get_feature_index_and_count_from_history(self, history: History):
-        if bool(re.search(r'[a-zA-Z]', history.cword)) and history.cword not in self.common_word_set:
+        if bool(re.search(r'[a-zA-Z]', history.cword)):
             return 0, self.dict.get(self.dict_key, 0)
         else:
             return self.INVALID_IDX, self.INVALID_VAL
 
 
 class ContainsOnlyLettersDict(FeatureDict):
-    def __init__(self, common_word_set):
+    def __init__(self):
         super().__init__()
         self.dict_key = 'contains_only_letters'
-        self.common_word_set = common_word_set
     def fill_dict(self, hist_sentence_list: [[History]]):
         """
             Check if the word has letters
@@ -403,21 +396,20 @@ class ContainsOnlyLettersDict(FeatureDict):
         for sentence in hist_sentence_list:
             for hist in sentence:
                 cur_word = hist.cword
-                if cur_word.isalpha() and cur_word not in self.common_word_set:
+                if cur_word.isalpha():
                     self.insert_key(self.dict_key)
 
     def get_feature_index_and_count_from_history(self, history: History):
-        if history.cword.isalpha() and history.cword not in self.common_word_set:
+        if history.cword.isalpha():
             return 0, self.dict.get(self.dict_key, 0)
         else:
             return self.INVALID_IDX, self.INVALID_VAL
 
 
 class ContainsHyphenDict(FeatureDict):
-    def __init__(self, common_word_set):
+    def __init__(self):
         super().__init__()
         self.dict_key = 'contains_hyphen'
-        self.common_word_set = common_word_set
     def fill_dict(self, hist_sentence_list: [[History]]):
         """
             Check if the word has letters
@@ -425,21 +417,20 @@ class ContainsHyphenDict(FeatureDict):
         for sentence in hist_sentence_list:
             for hist in sentence:
                 cur_word = hist.cword
-                if bool(re.search(r'-', cur_word)) and cur_word not in self.common_word_set:
+                if bool(re.search(r'-', cur_word)):
                     self.insert_key(self.dict_key)
 
     def get_feature_index_and_count_from_history(self, history: History):
-        if bool(re.search(r'-', history.cword)) and history.cword not in self.common_word_set:
+        if bool(re.search(r'-', history.cword)):
             return 0, self.dict.get(self.dict_key, 0)
         else:
             return self.INVALID_IDX, self.INVALID_VAL
 
 
 class IsFirstWordDict(FeatureDict):
-    def __init__(self, common_word_set):
+    def __init__(self):
         super().__init__()
         self.dict_key = 'is_first'
-        self.common_word_set = common_word_set
     def fill_dict(self, hist_sentence_list: [[History]]):
         """
             Check if the word is first in sentence
@@ -447,21 +438,20 @@ class IsFirstWordDict(FeatureDict):
         for sentence in hist_sentence_list:
             for hist in sentence:
                 pword = hist.pword
-                if pword == WordAndTagConstants.PWORD_SENTENCE_BEGINNING and hist.cword not in self.common_word_set:
+                if pword == WordAndTagConstants.PWORD_SENTENCE_BEGINNING:
                     self.insert_key(self.dict_key)
 
     def get_feature_index_and_count_from_history(self, history: History):
-        if history.pword == WordAndTagConstants.PWORD_SENTENCE_BEGINNING and history.cword not in self.common_word_set:
+        if history.pword == WordAndTagConstants.PWORD_SENTENCE_BEGINNING:
             return 0, self.dict.get(self.dict_key, 0)
         else:
             return self.INVALID_IDX, self.INVALID_VAL
 
 
 class IsLastWordDict(FeatureDict):
-    def __init__(self, common_word_set):
+    def __init__(self):
         super().__init__()
         self.dict_key = 'is_last'
-        self.common_word_set = common_word_set
     def fill_dict(self, hist_sentence_list: [[History]]):
         """
             Check if the word is last in sentence
@@ -469,11 +459,11 @@ class IsLastWordDict(FeatureDict):
         for sentence in hist_sentence_list:
             for hist in sentence:
                 nword = hist.nword
-                if nword == WordAndTagConstants.NWORD_SENTENCE_END and hist.cword not in self.common_word_set:
+                if nword == WordAndTagConstants.NWORD_SENTENCE_END:
                     self.insert_key(self.dict_key)
 
     def get_feature_index_and_count_from_history(self, history: History):
-        if history.nword == WordAndTagConstants.NWORD_SENTENCE_END and history.cword not in self.common_word_set:
+        if history.nword == WordAndTagConstants.NWORD_SENTENCE_END:
             return 0, self.dict.get(self.dict_key, 0)
         else:
             return self.INVALID_IDX, self.INVALID_VAL
@@ -505,10 +495,10 @@ class ContainsSymbolDict(FeatureDict):
 
 
 class ContainsOnlySymbolsDict(FeatureDict):
-    def __init__(self, common_word_set):
+    def __init__(self):
         super().__init__()
         self.dict_key = 'contains_symbol'
-        self.common_word_set = common_word_set
+
     def fill_dict(self, hist_sentence_list: [[History]]):
         """
             Check if the word contains a symbol
@@ -520,13 +510,11 @@ class ContainsOnlySymbolsDict(FeatureDict):
                 for letter in cur_word:
                     if letter not in Symbols:
                         all_symbols = False
-                if all_symbols and cur_word not in self.common_word_set:
+                if all_symbols:
                     self.insert_key(self.dict_key)
 
     def get_feature_index_and_count_from_history(self, history: History):
         cur_word = history.cword
-        if cur_word in self.common_word_set:
-            return self.INVALID_IDX, self.INVALID_VAL
         for letter in cur_word:
             if letter not in Symbols:
                 return self.INVALID_IDX, self.INVALID_VAL
