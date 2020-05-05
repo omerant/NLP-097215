@@ -53,17 +53,17 @@ class FeatureStatistics:
         self.fd_nword_ctag = ft.NextWordCurrTagCountDict()
         self.fd_ppword_ctag = ft.DoublePrevWordCurrTagCountDict()
         self.fd_nnword_ctag = ft.DoubleNextWordCurrTagCountDict()
-        # self.fd_ctag_pptag = ft.SkipBigramCountDict()
+        self.fd_ctag_pptag = ft.SkipBigramCountDict()
         # letters digits
         self.fd_has_first_capital_letter = ft.HasFirstCapitalLetterDict()
         self.fd_has_all_capital_letters = ft.HasAllCapitalLettersDict()
         self.fd_has_digit = ft.HasDigitDict()
         self.fd_has_only_digits = ft.HasOnlyDigitDict()
-        # self.fd_contains_letter = ft.ContainsLetterDict(self.common_word_set)
-        # self.fd_has_only_letters = ft.ContainsOnlyLettersDict(self.common_word_set)
+        # self.fd_contains_letter = ft.ContainsLetterDict()
+        # self.fd_has_only_letters = ft.ContainsOnlyLettersDict()
         self.fd_contains_hyphen = ft.ContainsHyphenDict()
         # first last
-        # self.fd_is_first_word = ft.IsFirstWordDict(self.common_word_set)
+        self.fd_is_first_word = ft.IsFirstWordDict()
         # self.fd_is_lat_word = ft.IsLastWordDict(self.common_word_set)
         # symbols
         self.fd_has_symbol = ft.ContainsSymbolDict()
@@ -79,7 +79,9 @@ class FeatureStatistics:
         with open(file_path) as f:
             hist_sentence_list = []
             for idx, line in enumerate(f):
-                splited_words = split(' |,\n', line[:-1]) if line[-1] == '\n' else split(' |,\n', line)  # remove \n from last part of sentence
+                # splited_words = split(' |,\n', line[:-1]) if line[-1] == '\n' else split(' |,\n', line)  # remove \n from last part of sentence
+                splited_words = split(' |,\n', line[:-1])
+                del splited_words[-1]
                 new_sentence_hist_list = []
                 for word_idx in range(len(splited_words)):
                     cword, ctag = split('_', splited_words[word_idx])
@@ -143,6 +145,9 @@ class FeatureStatistics:
 
     def fill_possible_tags_with_certainty_dict(self, certainty=0.995, appearances=5):
         possible_tags_with_certainty_dict = dict()
+        possible_tags_with_certainty_dict['.'] = '.'
+        possible_tags_with_certainty_dict['?'] = '.'
+        possible_tags_with_certainty_dict['!'] = '.'
         for word, tag_count_dict in self.word_possible_tag_dict.items():
             total_count = 0
             for tag, tag_count in tag_count_dict.items():
@@ -246,6 +251,8 @@ class FeatureStatistics:
             os.mkdir(dict_folder)
 
         for idx, sentence in enumerate(self.history_sentence_list):
+            if idx % 500 == 0:
+                print(f'filling sentence number {idx}')
             for hist in sentence:
                 tag_set = self.word_possible_tag_set[hist.cword]
                 for ctag in tag_set:
@@ -296,8 +303,6 @@ class FeatureStatistics:
             fd = getattr(self, fd_name)
             if fd_name != 'fd_word_tag':
                 fd.dict = filter_dict(fd.dict)
-            else:
-                pass
 
     def get_non_zero_sparse_feature_vec_indices_from_history(self, history: ft.History):
         sparse_feature_vec = OrderedDict()

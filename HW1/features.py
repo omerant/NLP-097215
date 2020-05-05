@@ -368,6 +368,7 @@ class ContainsLetterDict(FeatureDict):
     def __init__(self):
         super().__init__()
         self.dict_key = 'contains_letter'
+
     def fill_dict(self, hist_sentence_list: [[History]]):
         """
             Check if the word has letters
@@ -389,6 +390,7 @@ class ContainsOnlyLettersDict(FeatureDict):
     def __init__(self):
         super().__init__()
         self.dict_key = 'contains_only_letters'
+
     def fill_dict(self, hist_sentence_list: [[History]]):
         """
             Check if the word has letters
@@ -431,6 +433,7 @@ class IsFirstWordDict(FeatureDict):
     def __init__(self):
         super().__init__()
         self.dict_key = 'is_first'
+
     def fill_dict(self, hist_sentence_list: [[History]]):
         """
             Check if the word is first in sentence

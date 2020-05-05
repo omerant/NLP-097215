@@ -161,8 +161,8 @@ class MaximumEntropyMarkovModel:
         args_5 = self.feature_statistics.word_possible_tag_set
         args_6 = self.feature_statistics.word_possible_tag_with_threshold_dict
         args = (arg_1, arg_2, args_3, args_4, args_5, args_6)
-        w_0 = np.random.normal(0, 0.01, (self.feature_statistics.num_features)).astype(np.float64)
-        # w_0 = np.zeros(self.feature_statistics.num_features, dtype=np.float32)
+        # w_0 = np.random.normal(0, 0.01, (self.feature_statistics.num_features)).astype(np.float64)
+        w_0 = np.zeros(self.feature_statistics.num_features, dtype=np.float64)
         optimal_params = fmin_l_bfgs_b(func=self.calc_objective_per_iter, x0=w_0, args=args, maxiter=10000, iprint=1)
         weights = optimal_params[0]
         print(weights)

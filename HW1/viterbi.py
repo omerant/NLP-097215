@@ -74,7 +74,7 @@ class Viterbi:
                 cur_tagged_res.append(cword + '_' + tag)
             all_tagged_res_list.append(cur_tagged_res)
 
-            assert len(cur_res) == len(sentence)
+            assert (len(cur_res) == len(sentence)), f'cur res: {cur_res}, sentence: {sentence}'
         # print(all_tagged_res_list)
         # print(f'total accuracy: {sum(all_acc_list)/len(all_acc_list)}')
         print(f'precent of known words in corpus: {100 * len(all_right_tag_list_known)/len(all_right_tag_list)}')
