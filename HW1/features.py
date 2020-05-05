@@ -1,8 +1,10 @@
+import numpy as np
 from collections import OrderedDict, namedtuple
 from abc import abstractmethod, ABC
 import re
 import utils
 from utils import History, Symbols
+np.random.seed(0)
 
 
 class WordAndTagConstants:

@@ -3,6 +3,7 @@ import pickle
 import os
 from utils import History
 from utils import timeit, MIN_EXP_VAL, MIN_LOG_VAL, BASE_PROB, OpenClassTypes, UNKNOWN_WORD
+np.random.seed(0)
 
 
 class Viterbi:
@@ -109,7 +110,6 @@ class Viterbi:
             tag_set = self.word_possible_tag_set[word]
 
         else:
-            # tag_set = self.tags_set
             tag_set = self.rare_words_tags
         return tag_set
 

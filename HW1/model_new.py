@@ -6,12 +6,13 @@ from utils import History
 from scipy.optimize import fmin_l_bfgs_b
 from utils import MIN_EXP_VAL, MIN_LOG_VAL, BASE_PROB
 import timeit
+np.random.seed(0)
 np.seterr(all='raise')
 
 
 class MaximumEntropyMarkovModel:
-    def __init__(self, train_data_path, threshold, reg_lambda):
-        self.feature_statistics = FeatureStatistics(train_data_path, threshold)
+    def __init__(self, train_data_path, threshold, reg_lambda, config):
+        self.feature_statistics = FeatureStatistics(train_data_path, threshold, config)
         self.feature_statistics.pre_process(False)
         self.dump_weights_path = 'weights'
         self.reg_lambda = reg_lambda

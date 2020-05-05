@@ -7,10 +7,11 @@ import features as ft
 import numpy as np
 from features import WordAndTagConstants
 from utils import History, UNKNOWN_WORD
+np.random.seed(0)
 
 
 class FeatureStatistics:
-    def __init__(self, input_file_path, threshold, rare_word_num_appearence_th=3):
+    def __init__(self, input_file_path, threshold, config, rare_word_num_appearence_th=3):
         #TODO: try higher rare_word_num_appearence_th
         self.file_path = input_file_path
         self.history_sentence_list = self.fill_ordered_history_list(self.file_path)
@@ -33,45 +34,17 @@ class FeatureStatistics:
         self.version = 1
         self.threshold = threshold
         self.num_features = 0
-
-        # Init all features dictionaries - each feature dict's name should start with fd
-        # fill dict for 1-3 ngrams
-        self.fd_trigram_tags = ft.TrigramTagsCountDict()
-        self.fd_bigram_tags = ft.BigramTagsCountDict()
-        self.fd_unigram_tags = ft.UnigramTagsCountDict()
-        self.fd_word_tag = ft.WordsTagsCountDict()
-        # fill dict for each prefix len
-        for i in range(1, 5):
-            setattr(self, 'fd_words_prefix'+str(i), ft.WordsPrefixTagsCountDict(i))
-
-        # fill dict for each suffix len
-        for i in range(1, 5):
-            setattr(self, 'fd_words_suffix'+str(i), ft.WordsSuffixTagsCountDict(i))
-
-        self.fd_pword_ctag = ft.PrevWordCurrTagCountDict()
-        self.fd_nword_ctag = ft.NextWordCurrTagCountDict()
-        self.fd_ppword_ctag = ft.DoublePrevWordCurrTagCountDict()
-        self.fd_nnword_ctag = ft.DoubleNextWordCurrTagCountDict()
-        self.fd_ctag_pptag = ft.SkipBigramCountDict()
-        # letters digits
-        self.fd_has_first_capital_letter = ft.HasFirstCapitalLetterDict()
-        self.fd_has_all_capital_letters = ft.HasAllCapitalLettersDict()
-        self.fd_has_digit = ft.HasDigitDict()
-        self.fd_has_only_digits = ft.HasOnlyDigitDict()
-        # self.fd_contains_letter = ft.ContainsLetterDict()
-        # self.fd_has_only_letters = ft.ContainsOnlyLettersDict()
-        self.fd_contains_hyphen = ft.ContainsHyphenDict()
-        # first last
-        self.fd_is_first_word = ft.IsFirstWordDict()
-        # self.fd_is_lat_word = ft.IsLastWordDict(self.common_word_set)
-        # symbols
-        self.fd_has_symbol = ft.ContainsSymbolDict()
-        self.fd_all_symbol = ft.ContainsOnlySymbolsDict()
-
-        # #word length
-        # for i in range(1, 14):
-        #     setattr(self, 'fd_word_length'+str(i), ft.WordsLengthDict(i))
-        self.fd_two_tags_one_word = ft.TwoPreviousTagsAndCurrentWord()
+        for fd_class in config.feature_dicts:
+            # setattr(self, 'fd_' + str(i), ft.WordsPrefixTagsCountDict(i))
+            if fd_class is ft.WordsPrefixTagsCountDict:
+                for i in range(1, 5):
+                    setattr(self, 'fd_' + str(fd_class) + str(i), ft.WordsPrefixTagsCountDict(i))
+            elif fd_class is ft.WordsSuffixTagsCountDict:
+                for i in range(1, 5):
+                    setattr(self, 'fd_' + str(fd_class) + str(i), ft.WordsSuffixTagsCountDict(i))
+            else:
+                setattr(self, 'fd_' + str(fd_class), fd_class())
+        pass
 
     @staticmethod
     def fill_ordered_history_list(file_path, is_test=False):
@@ -198,7 +171,7 @@ class FeatureStatistics:
         return rare_word_set, common_word_set
 
     def rare_words_possible_tags(self):
-        rare_words_tags=set()
+        rare_words_tags = set()
         for word in self.rare_word_set:
             rare_words_tags.update(self.word_possible_tag_dict[word].keys())
         return rare_words_tags
