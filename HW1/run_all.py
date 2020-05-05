@@ -74,11 +74,11 @@ def run_all(train_path, threshold, reg_lambda, test_path):
 # run example:
 # python run_all.py --th 10 --tra data/train1.wtag --te data/test1.wtag --reg-lambda 0.01 --run-all true --conf base
 # pre_process  only
-# python run_all.py --th 10 --tra data/train1.wtag --te data/test1_short.wtag --reg-lambda 0.01 --pp true
+# python run_all.py --th 10 --tra data/train1.wtag --te data/test1_short.wtag --reg-lambda 0.01 --pp true --conf base
 # train only
-# python run_all.py --th 10 --tra data/train1.wtag --te data/test1_short.wtag --reg-lambda 0.01 --tr true
+# python run_all.py --th 10 --tra data/train1.wtag --te data/test1_short.wtag --reg-lambda 0.01 --tr true --conf base
 # predict only
-# python run_all.py --th 10 --tra data/train1.wtag --te data/test1_short.wtag --reg-lambda 0.01 --pr true
+# python run_all.py --th 10 --tra data/train1.wtag --te data/test1_short.wtag --reg-lambda 0.01 --pr true --conf base
 
 
 if __name__ == '__main__':
