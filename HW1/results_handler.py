@@ -13,7 +13,7 @@ from re import split
 class ResultsHandler:
     def __init__(self):
         self.res_path = 'res'
-        self.dump_name = 'test1_10_10.0'
+        self.dump_name = 'known_all_features/test1_10_10.0'
         self.cf_name = 'cf'
 
     def get_res(self):
@@ -27,17 +27,8 @@ class ResultsHandler:
         self.y_pred = [label for sentence in self.all_res_tags for label in sentence]
         self.all_labels = list(dict.fromkeys(self.y_pred))
         self.idx_to_labels = {idx: label for idx,label in enumerate(self.all_labels)}
-        dollar, wrong, missed =0,0,0
-        for true,pred in zip(self.y_true, self.y_pred):
-            if pred == 'JJ':
-                dollar+=1
-                if true != 'JJ':
-                    wrong+=1
-            if true == 'JJ' and pred != 'JJ':
-                missed +=1
-        print('all classified as JJ ', dollar)
-        print('worng classified as JJ ', wrong)
-        print('missed JJ ', missed)
+        self.words = [wordtag.split('_')[0] for sentence in self.all_tagged_res_list for wordtag in sentence]
+        self.true_tags = []
 
     def plot_confusion_matrix(self):
         self.C = confusion_matrix(self.y_true, self.y_pred, labels=self.all_labels)
@@ -51,12 +42,31 @@ class ResultsHandler:
         cm.savefig(save_path, dpi=400)
 
     def get_most_mistakes(self):
-        mistakes = self.C
-        mistakes[np.diag_indices_from(mistakes)] = 0
-        max_idxs = np.argpartition(mistakes,-10, axis=None)[-10:]
-        print(max_idxs)
-        print(mistakes[max_idxs])
+        mistakes = {}
+        for word,pred,true in zip(self.words,self.y_pred,self.y_true):
+            if pred != true:
+                if not mistakes.get(word,None):
+                    mistakes[word] = [(pred,true)]
+                else:
+                    mistakes[word].append((pred,true))
+        most_mistakes = {k:v for k,v in sorted(mistakes.items(), key=lambda item:len(item[1]),reverse=True)}
+        word_occurrences = {}
+        for word in self.words:
+            if not word_occurrences.get(word,None):
+                word_occurrences[word] = 1
+            else:
+                word_occurrences[word]+=1
+        mistakes_ratio = {k:len(v)/word_occurrences[k] for k,v in most_mistakes.items() if len(v)>10}
+        mistakes_ratio = {k:v for k,v in sorted(mistakes_ratio.items(), key=lambda item:item[1], reverse=True)}
+        common_words_mistakes = {k:set(most_mistakes[k]) for k,v in mistakes_ratio.items()}
+        most_mistakes_num = {k:len(v) for k,v in most_mistakes.items() if len(v)>10}
 
+        print('Ratio of mistakes per word:')
+        print(mistakes_ratio)
+        print('(predicted tag, true tag) for all different mistakes per word:')
+        print(common_words_mistakes)
+        print('Num of mistakes per word:')
+        print(most_mistakes_num)
     def acc_per_label(self):
         accs = {self.idx_to_labels[i]: (row[i] / np.sum(row)) if np.sum(row)>0 else 0 for i,row in enumerate(self.C)}
         print("% acc per real label: ", accs)
@@ -90,8 +100,8 @@ class ResultsHandler:
 
 #
 res = ResultsHandler()
-res.new_words()
+# res.new_words()
 res.get_res()
-res.plot_confusion_matrix()
-# res.get_most_mistakes()
-res.acc_per_label()
+# res.plot_confusion_matrix()
+res.get_most_mistakes()
+# res.acc_per_label()
