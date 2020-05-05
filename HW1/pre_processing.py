@@ -10,9 +10,8 @@ from utils import History, UNKNOWN_WORD
 
 
 class FeatureStatistics:
-    def __init__(self, input_file_path, threshold=3, rare_word_num_appearence_th=2):
+    def __init__(self, input_file_path, threshold, rare_word_num_appearence_th=3):
         #TODO: try higher rare_word_num_appearence_th
-        rare_word_num_appearence_th = 3
         self.file_path = input_file_path
         self.history_sentence_list = self.fill_ordered_history_list(self.file_path)
         self.num_sentences = len(self.history_sentence_list)
@@ -75,13 +74,16 @@ class FeatureStatistics:
         self.fd_two_tags_one_word = ft.TwoPreviousTagsAndCurrentWord()
 
     @staticmethod
-    def fill_ordered_history_list(file_path):
+    def fill_ordered_history_list(file_path, is_test=False):
         with open(file_path) as f:
             hist_sentence_list = []
             for idx, line in enumerate(f):
                 # splited_words = split(' |,\n', line[:-1]) if line[-1] == '\n' else split(' |,\n', line)  # remove \n from last part of sentence
-                splited_words = split(' |,\n', line[:-1])
-                del splited_words[-1]
+                if not is_test:
+                    splited_words = split(' |,\n', line[:-1])
+                    del splited_words[-1]
+                else:
+                    splited_words = split(' |,\n', line[:-1]) if line[-1] == '\n' else split(' |,\n', line)
                 new_sentence_hist_list = []
                 for word_idx in range(len(splited_words)):
                     cword, ctag = split('_', splited_words[word_idx])

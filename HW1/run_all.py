@@ -38,7 +38,7 @@ def predict(train_path, threshold, reg_lambda, test_path):
                                                      reg_lambda=reg_lambda)
     ft_statistics = FeatureStatistics(input_file_path=train_path, threshold=threshold)
     ft_statistics.pre_process(fill_possible_tag_dict=False)
-    test_sentence_hist_list = FeatureStatistics.fill_ordered_history_list(file_path=test_path)
+    test_sentence_hist_list = FeatureStatistics.fill_ordered_history_list(file_path=test_path, is_test=True)
     tag_set = ft_statistics.tags_set
     all_possible_tags_dict = ft_statistics.all_possible_tags_dict
     get_ft_from_hist_func = ft_statistics.get_non_zero_sparse_feature_vec_indices_from_history
