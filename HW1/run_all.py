@@ -3,7 +3,7 @@ from pre_processing import FeatureStatistics
 from model_new import MaximumEntropyMarkovModel
 from viterbi import Viterbi
 from utils import timeit
-from config import BaseCfg
+from config import BaseCfg, NoPrefSufCfg
 
 
 parser = argparse.ArgumentParser()
@@ -85,6 +85,8 @@ if __name__ == '__main__':
     config = None
     if args.config == 'base':
         config = BaseCfg
+    elif args.config == 'no_preff_sugg':
+        config = NoPrefSufCfg
     # TODO: add another configurations when needed
     if args.run_all:
         print('RUNNING ALL FLOW')
