@@ -12,7 +12,7 @@ parser.add_argument("--threshold", help="threshold that will be used to filter f
 parser.add_argument("--train-path", help="path to training data", type=str, required=True)
 parser.add_argument("--test-path", help="path to test data", type=str, required=True)
 parser.add_argument("--reg-lambda", help="regularization lambda", type=float, required=True)
-parser.add_argument("--config", help="regularization lambda", choices=['base', 'comp1', 'comp2'], required=True)
+parser.add_argument("--config", help="regularization lambda", choices=['base', 'nps', 'comp1', 'comp2'], required=True)
 
 parser.add_argument("--run-all", help="run pre_process + train + predict", type=bool, default=False)
 parser.add_argument("--pp", help="run only pre_process", type=bool, required=False, default=False)
@@ -85,7 +85,7 @@ if __name__ == '__main__':
     config = None
     if args.config == 'base':
         config = BaseCfg
-    elif args.config == 'no_preff_sugg':
+    elif args.config == 'nps':
         config = NoPrefSufCfg
     # TODO: add another configurations when needed
     if args.run_all:

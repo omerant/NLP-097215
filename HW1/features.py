@@ -576,3 +576,46 @@ class TwoPreviousTagsAndCurrentWord(FeatureDict):
         key = (history.pptag, history.ptag, history.cword)
         return self.get_key_index(key)
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+######################################### NEW FEATURES #######################################
+class NextWordCommasDict(FeatureDict):
+    def __init__(self):
+        super().__init__()
+        self.dict_key = 'nw_comma'
+
+    def fill_dict(self, hist_sentence_list: [[History]]):
+        """
+            Check if the word contains a symbol
+        """
+        for sentence in hist_sentence_list:
+            for hist in sentence:
+                if hist.nword == ',':
+                    self.insert_key(self.dict_key)
+
+    def get_feature_index_and_count_from_history(self, history: History):
+        if history.nword == ',':
+            return 0, self.dict.get(self.dict_key, 0)
+        else:
+            return self.INVALID_IDX, self.INVALID_VAL
+
+
+
+
+
