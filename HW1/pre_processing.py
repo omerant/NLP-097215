@@ -7,6 +7,7 @@ import features as ft
 import numpy as np
 from features import WordAndTagConstants
 from utils import History, UNKNOWN_WORD
+from scipy.sparse import csr_matrix
 np.random.seed(0)
 
 
@@ -31,6 +32,7 @@ class FeatureStatistics:
         # self.tag_possible_word_dict = self.fill_tag_possible_word_dict()
 
         self.all_possible_tags_dict = dict()
+        self.new_all_possible_tags_dict = dict()
         self.version = 1
         self.threshold = threshold
         self.num_features = 0
@@ -234,7 +236,7 @@ class FeatureStatistics:
                     new_hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag,
                                        ctag=ctag, nword=hist.nword, pword=hist.pword,
                                        nnword=hist.nnword, ppword=hist.ppword)
-                    if not self.all_possible_tags_dict.get(new_hist, None):
+                    if self.all_possible_tags_dict.get(new_hist, None) == None:
                         self.all_possible_tags_dict[new_hist] = self.get_non_zero_sparse_feature_vec_indices_from_history(new_hist)
         if not os.path.isdir(hist_ft_dict_path):
             os.makedirs(hist_ft_dict_path)
@@ -242,14 +244,15 @@ class FeatureStatistics:
         with open(full_path, "wb") as f:
             p = pickle.Pickler(f)
             p.fast = True
-            p.dump(self.all_possible_tags_dict)
+            p.dump((self.all_possible_tags_dict, self.new_all_possible_tags_dict))
 
         print(f'total keys in all possible tags dict: {len(self.all_possible_tags_dict.keys())}')
+
 
     def load_all_possible_tags_dict(self, path):
         print('loading all_possible_prev_tags_dict')
         with open(path, 'rb') as f:
-            self.all_possible_tags_dict = pickle.load(f)
+            self.all_possible_tags_dict, self.new_all_possible_tags_dict = pickle.load(f)
         print('finished loading all_possible_prev_tags_dict')
 
     def fill_num_features(self):
@@ -297,8 +300,11 @@ class FeatureStatistics:
         for k, v in sparse_feature_vec.items():
             feature_vec[k] = v
 
-        non_zero_indices = np.nonzero(feature_vec)
-        return non_zero_indices
+        # non_zero_indices = np.nonzero(feature_vec)
+        # return non_zero_indices
+        sparse_vec = csr_matrix(feature_vec)
+        return sparse_vec
+
 
     def pre_process(self, fill_possible_tag_dict: bool = True):
         self.fill_feature_dicts()

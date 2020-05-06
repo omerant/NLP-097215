@@ -6,6 +6,7 @@ from utils import History
 from scipy.optimize import fmin_l_bfgs_b
 from utils import MIN_EXP_VAL, MIN_LOG_VAL, BASE_PROB
 import timeit
+from scipy.sparse import csr_matrix
 np.random.seed(0)
 np.seterr(all='raise')
 
@@ -37,11 +38,16 @@ class MaximumEntropyMarkovModel:
         print('finished loading probability dict')
 
     def calc_empirical_counts(self):
-        features_linear_term_indices = [self.feature_statistics.all_possible_tags_dict[hist] for sentence in
-                                        self.feature_statistics.history_sentence_list for hist in sentence]
-        empirical_counts = np.zeros(self.feature_statistics.num_features, dtype=np.float32)
-        for feature_ind in features_linear_term_indices:
-            empirical_counts[feature_ind] += 1
+        # features_linear_term_indices = [self.feature_statistics.all_possible_tags_dict[hist] for sentence in
+        #                                 self.feature_statistics.history_sentence_list for hist in sentence]
+        # empirical_counts = np.zeros(self.feature_statistics.num_features, dtype=np.float64)
+        # for feature_ind in features_linear_term_indices:
+        #     empirical_counts[feature_ind] += 1
+        empirical_counts = csr_matrix(np.zeros(self.feature_statistics.num_features, dtype=np.float64))
+        feature_vectors = [self.feature_statistics.all_possible_tags_dict[hist] for sentence in
+                            self.feature_statistics.history_sentence_list for hist in sentence]
+        for feature_vector in feature_vectors:
+            empirical_counts += feature_vector
 
         return empirical_counts
 
@@ -49,6 +55,7 @@ class MaximumEntropyMarkovModel:
     def calc_normalization_term_exp_dict_prob_dict(v, all_possible_hist_feature_dict, sentence_history_list,
                                                    word_to_tags_set_dict, word_to_most_probable_tag_set):
         starttime = timeit.default_timer()
+        all_possible_hist_feature_dict = all_possible_hist_feature_dict
         norm_term = 0.
         exp_dict = dict()
         prob_dict = dict()
@@ -66,15 +73,19 @@ class MaximumEntropyMarkovModel:
                     n_hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag,
                                      nword=hist.nword, pword=hist.pword, ctag=tag,
                                      nnword=hist.nnword, ppword=hist.ppword)
+                    # if not exp_dict.get(n_hist, None):
+                    #
+                    #     dot_prod = np.sum(v[all_possible_hist_feature_dict[n_hist]])
+                    #     # exp_dict[n_hist] = np.exp(dot_prod).astype(np.float128)
+                    #     if dot_prod > MIN_EXP_VAL:
+                    #         exp_dict[n_hist] = np.exp(dot_prod).astype(np.float64)
+                    #     else:
+                    #         exp_dict[n_hist] = 0.
                     if not exp_dict.get(n_hist, None):
-                        dot_prod = np.sum(v[all_possible_hist_feature_dict[n_hist]])
-                        # exp_dict[n_hist] = np.exp(dot_prod).astype(np.float128)
-                        if dot_prod > MIN_EXP_VAL:
-                            exp_dict[n_hist] = np.exp(dot_prod).astype(np.float64)
-                        else:
-                            exp_dict[n_hist] = 0.
+                        exp_dict[n_hist] =  np.exp(all_possible_hist_feature_dict[n_hist].dot(v).item())
                     cur_possible_hist_list.append(n_hist)
                     norm_i += exp_dict[n_hist]
+
 
                 # fill prob_dict
                 for idx, hist in enumerate(cur_possible_hist_list):
@@ -102,41 +113,66 @@ class MaximumEntropyMarkovModel:
                                     break
 
                 # update normzliaztion term
-                if len(cur_possible_hist_list) == 1:
-                    norm_term += np.sum(v[all_possible_hist_feature_dict[n_hist]]) #dot prod
-                else:
-                    norm_term += np.log(norm_i)
+                # if len(cur_possible_hist_list) == 1:
+                #     norm_term += np.sum(v[all_possible_hist_feature_dict[n_hist]]) #dot prod
+                # else:
+                #     norm_term += np.log(norm_i)
         print("execution time is :", timeit.default_timer() - starttime)
+
+        #TODO can implement norm_term faster?
+        norm_term = 0.
+        for sentence in sentence_history_list:
+            for hist in sentence:
+                sum=0.
+                tag_set = word_to_tags_set_dict[hist.cword]
+                for tag in tag_set:
+                    n_hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag,
+                                     nword=hist.nword, pword=hist.pword, ctag=tag,
+                                     nnword=hist.nnword, ppword=hist.ppword)
+                    sum += np.exp(all_possible_hist_feature_dict[n_hist].dot(v))
+                norm_term += np.log(sum)
         return norm_term, prob_dict, exp_dict
 
     @staticmethod
     def calc_expected_counts(history_sentence_list, prob_dict, all_possible_hist_feature_dict,
                              word_to_tags_set_dict, word_to_most_probable_tag_set, v):
-        expected_counts = np.zeros(v.shape, np.float32)
+        all_possible_hist_feature_dict = all_possible_hist_feature_dict
+        prob_dict = prob_dict
+        expected_counts = np.zeros(v.shape, np.float64)
+        # for sentence in history_sentence_list:
+        #     for hist in sentence:
+        #         if word_to_most_probable_tag_set.get(hist.cword, None):
+        #             tag_set = {word_to_most_probable_tag_set[hist.cword][0]}
+        #         else:
+        #             tag_set = word_to_tags_set_dict[hist.cword]
+        #         for tag in tag_set:
+        #             n_hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag,
+        #                              ctag=tag, nword=hist.nword, pword=hist.pword,
+        #                              nnword=hist.nnword, ppword=hist.ppword)
+        #             expected_counts[all_possible_hist_feature_dict[n_hist]] += 1 * prob_dict[n_hist]
+                    # new_expected_counts[new_all_possible_hist_feature_dict[n_hist]] += 1 * new_prob_dict[n_hist]
         for sentence in history_sentence_list:
             for hist in sentence:
-                if word_to_most_probable_tag_set.get(hist.cword, None):
-                    tag_set = {word_to_most_probable_tag_set[hist.cword][0]}
-                else:
-                    tag_set = word_to_tags_set_dict[hist.cword]
+                tag_set = word_to_tags_set_dict[hist.cword]
                 for tag in tag_set:
                     n_hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag,
                                      ctag=tag, nword=hist.nword, pword=hist.pword,
                                      nnword=hist.nnword, ppword=hist.ppword)
-                    expected_counts[all_possible_hist_feature_dict[n_hist]] += 1 * prob_dict[n_hist]
-
+                    dot_prod = all_possible_hist_feature_dict[n_hist].dot(prob_dict[n_hist])
+                    expected_counts += dot_prod
         return expected_counts
 
     @staticmethod
     def calc_objective_per_iter(*args):
         v = args[0]
-        all_possible_hist_feature_dict = args[1]
+        all_possible_hist_feature_dict= args[1]
         reg_lambda = args[2]
         empirical_counts = args[3]
         sentence_history_list = args[4]
         word_to_tags_set_dict = args[5]
         word_to_most_probable_tag_set = args[6]
-        linear_term = v.dot(empirical_counts)
+        # linear_term = v.dot(empirical_counts)
+        linear_term = empirical_counts.dot(v).item()
         normalization_term, prob_dict, _ = MaximumEntropyMarkovModel.calc_normalization_term_exp_dict_prob_dict(
             v, all_possible_hist_feature_dict, sentence_history_list,
             word_to_tags_set_dict, word_to_most_probable_tag_set
@@ -144,6 +180,7 @@ class MaximumEntropyMarkovModel:
 
         regularization_term = 0.5 * reg_lambda * np.linalg.norm(v, ord=2)
         likelihood = linear_term - normalization_term - regularization_term
+
         # FINISHED CALCULATING LIKELIHOOD
         expected_counts = MaximumEntropyMarkovModel.calc_expected_counts(
             sentence_history_list, prob_dict, all_possible_hist_feature_dict, word_to_tags_set_dict,
@@ -151,11 +188,13 @@ class MaximumEntropyMarkovModel:
         )
         regularization_grad = reg_lambda * v
         grad = empirical_counts - expected_counts - regularization_grad
+
         # FINISHED CALCULATING GRAD
         return (-1) * likelihood, (-1) * grad
 
+
     def optimize_model(self):
-        arg_1 = self.feature_statistics.all_possible_tags_dict
+        arg_1 = (self.feature_statistics.all_possible_tags_dict)
         arg_2 = self.reg_lambda
         args_3 = self.calc_empirical_counts()
         args_4 = self.feature_statistics.history_sentence_list
