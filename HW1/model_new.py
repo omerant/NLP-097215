@@ -67,7 +67,7 @@ class MaximumEntropyMarkovModel:
                     tag_set = {word_to_most_probable_tag_set[hist.cword][0]}
                 else:
                     tag_set = word_to_tags_set_dict[hist.cword]
-
+                # tag_set = word_to_tags_set_dict[hist.cword]
                 # fill exp dict
                 for tag in tag_set:
                     n_hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag,
@@ -153,7 +153,11 @@ class MaximumEntropyMarkovModel:
                     # new_expected_counts[new_all_possible_hist_feature_dict[n_hist]] += 1 * new_prob_dict[n_hist]
         for sentence in history_sentence_list:
             for hist in sentence:
-                tag_set = word_to_tags_set_dict[hist.cword]
+                if word_to_most_probable_tag_set.get(hist.cword, None):
+                    tag_set = {word_to_most_probable_tag_set[hist.cword][0]}
+                else:
+                    tag_set = word_to_tags_set_dict[hist.cword]
+                # tag_set = word_to_tags_set_dict[hist.cword]
                 for tag in tag_set:
                     n_hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag,
                                      ctag=tag, nword=hist.nword, pword=hist.pword,
