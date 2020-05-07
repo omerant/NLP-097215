@@ -7,7 +7,7 @@ import features as ft
 import numpy as np
 from features import WordAndTagConstants
 from utils import History, UNKNOWN_WORD
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_matrix, coo_matrix
 np.random.seed(0)
 
 
@@ -31,8 +31,8 @@ class FeatureStatistics:
         self.word_possible_tag_with_threshold_dict = self.fill_possible_tags_with_certainty_dict()
         # self.tag_possible_word_dict = self.fill_tag_possible_word_dict()
 
-        self.all_possible_tags_dict = dict()
-        self.new_all_possible_tags_dict = dict()
+        self.hist_to_feature_vec_dict = dict()
+        self.hist_to_all_tag_feature_matrix_dict = dict()
         self.version = 1
         self.threshold = threshold
         self.num_features = 0
@@ -230,29 +230,41 @@ class FeatureStatistics:
         for idx, sentence in enumerate(self.history_sentence_list):
             if idx % 500 == 0:
                 print(f'filling sentence number {idx}')
+
             for hist in sentence:
-                tag_set = self.word_possible_tag_set[hist.cword]
+                # tag_set = self.word_possible_tag_set[hist.cword]
+                tag_set = self.tags_set
+                cur_feature_vecs = []
                 for ctag in tag_set:
                     new_hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag,
                                        ctag=ctag, nword=hist.nword, pword=hist.pword,
                                        nnword=hist.nnword, ppword=hist.ppword)
-                    if self.all_possible_tags_dict.get(new_hist, None) == None:
-                        self.all_possible_tags_dict[new_hist] = self.get_non_zero_sparse_feature_vec_indices_from_history(new_hist)
+                    if self.hist_to_feature_vec_dict.get(new_hist, None) is None:
+                        self.hist_to_feature_vec_dict[new_hist] = \
+                            self.get_non_zero_sparse_feature_vec_indices_from_history(new_hist)
+                    cur_feature_vecs.append(self.hist_to_feature_vec_dict[new_hist].toarray().squeeze(0).astype(float))
+                key_all_tag_hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag,
+                                           ctag=None, nword=hist.nword, pword=hist.pword,
+                                           nnword=hist.nnword, ppword=hist.ppword)
+                # fill dict that contains matrices with dim num_tagsXnum_features, it will be used to speed up operations
+                if self.hist_to_all_tag_feature_matrix_dict.get(key_all_tag_hist, None) is None:
+                    res = csr_matrix(cur_feature_vecs)
+                    self.hist_to_all_tag_feature_matrix_dict[key_all_tag_hist] = res
+
         if not os.path.isdir(hist_ft_dict_path):
             os.makedirs(hist_ft_dict_path)
         full_path = os.path.join(hist_ft_dict_path, hist_dict_name)
         with open(full_path, "wb") as f:
             p = pickle.Pickler(f)
             p.fast = True
-            p.dump((self.all_possible_tags_dict, self.new_all_possible_tags_dict))
+            p.dump((self.hist_to_feature_vec_dict, self.hist_to_all_tag_feature_matrix_dict))
 
-        print(f'total keys in all possible tags dict: {len(self.all_possible_tags_dict.keys())}')
-
+        print(f'total keys in all possible tags dict: {len(self.hist_to_feature_vec_dict.keys())}')
 
     def load_all_possible_tags_dict(self, path):
         print('loading all_possible_prev_tags_dict')
         with open(path, 'rb') as f:
-            self.all_possible_tags_dict, self.new_all_possible_tags_dict = pickle.load(f)
+            self.hist_to_feature_vec_dict, self.hist_to_all_tag_feature_matrix_dict = pickle.load(f)
         print('finished loading all_possible_prev_tags_dict')
 
     def fill_num_features(self):
@@ -304,7 +316,6 @@ class FeatureStatistics:
         # return non_zero_indices
         sparse_vec = csr_matrix(feature_vec)
         return sparse_vec
-
 
     def pre_process(self, fill_possible_tag_dict: bool = True):
         self.fill_feature_dicts()
