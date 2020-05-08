@@ -47,20 +47,13 @@ def predict(train_path, threshold, reg_lambda, test_path, conf):
     word_possible_tag_set = ft_statistics.word_possible_tag_set
     word_possible_tag_with_threshold_dict = ft_statistics.word_possible_tag_with_threshold_dict
     rare_words_tags = ft_statistics.rare_words_tags
-    _, prob_dict, exp_dict = MaximumEntropyMarkovModel.calc_normalization_term(
-        v=v, all_possible_hist_feature_dict=all_possible_tags_dict,
-        sentence_history_list=ft_statistics.history_sentence_list, word_to_tags_set_dict=word_possible_tag_set,
-        word_to_most_probable_tag_set=word_possible_tag_with_threshold_dict
-    )
 
     viterbi = Viterbi(
-        v=v, sentence_hist_list=test_sentence_hist_list, tags_set=tag_set,
+        v=v, sentence_hist_list=test_sentence_hist_list, tags_list=tag_set,
         all_possible_tags_dict=all_possible_tags_dict, get_feature_from_hist=get_ft_from_hist_func,
         word_possible_tag_set=word_possible_tag_set,
         word_possible_tag_with_threshold_dict=word_possible_tag_with_threshold_dict,
         rare_words_tags=rare_words_tags,
-        prob_dict=prob_dict,
-        exp_dict=exp_dict,
         threshold=args.threshold,
         reg_lambda=args.reg_lambda
     )

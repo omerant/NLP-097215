@@ -7,25 +7,23 @@ np.random.seed(0)
 
 
 class Viterbi:
-    def __init__(self, v, sentence_hist_list: [[History]], tags_set, all_possible_tags_dict,
+    def __init__(self, v, sentence_hist_list: [[History]], tags_list, all_possible_tags_dict,
                  get_feature_from_hist, word_possible_tag_set, word_possible_tag_with_threshold_dict,
-                 rare_words_tags, prob_dict, exp_dict, threshold, reg_lambda, beam_width=6):
+                 rare_words_tags, threshold, reg_lambda, beam_width=6):
         self.v = v
         self.sentence_list = sentence_hist_list
-        tags_set.add('*')
-        self.tags_set = tags_set
+        tags_list.append('*')
+        self.tags_list = tags_list
         self.all_possible_tags_dict = all_possible_tags_dict
         self.get_feature_from_hist = get_feature_from_hist
         self.word_possible_tag_set = word_possible_tag_set
         self.word_possible_tag_with_threshold_dict = word_possible_tag_with_threshold_dict
         self.rare_words_tags = rare_words_tags
-        tag_list = list(tags_set)
-        self.tag_to_index = {tag_list[i]: i for i in range(len(tag_list))}
+        self.tag_to_index = {self.tags_list[i]: i for i in range(len(self.tags_list))}
         self.index_to_tag = {v: k for k, v in self.tag_to_index.items()}
         self.pi_tables = None
         self.bp_tables = None
-        self.prob_dict = prob_dict
-        self.exp_dict = exp_dict
+        self.prob_dict = dict()
         self.res_path = 'res'
         self.dump_name = 'test1'
         self.threshold = threshold
@@ -103,53 +101,43 @@ class Viterbi:
         return acc, right_tag_list
 
     def get_possible_tag_set_from_word(self, word):
-        tag_set = self.tags_set - {'*'}
+        tag_set = self.tags_list[:-1]
         return tag_set
 
     # def calc_tag_set_for_unknown(self, hist):
 
     @timeit
     def fill_prob_dict_from_sentence(self, sentence):
-        sentence_with_unk = []
         for idx, hist in enumerate(sentence):
             if idx == 0:
                 pptag_set = {'*'}
                 ptag_set = {'*'}
 
             ctag_set = self.get_possible_tag_set_from_word(hist.cword)
-            for pptag in pptag_set:
+
+            filtered_ctag_set = None
+            cur_hist_list = []
+            for c_tag in ctag_set:
                 for ptag in ptag_set:
-                    norm_i = 0.
-                    cur_possible_hist_list = []
-                    for c_tag in ctag_set:
+                    for pptag in pptag_set:
                         n_hist = History(cword=hist.cword, pptag=pptag, ptag=ptag,
                                          nword=hist.nword, pword=hist.pword, ctag=c_tag,
                                          nnword=hist.nnword, ppword=hist.ppword)
-                        if not self.prob_dict.get(n_hist, None):
-                            if not self.all_possible_tags_dict.get(n_hist, None):
-                                self.all_possible_tags_dict[n_hist] = self.get_feature_from_hist(n_hist)
-                            dot_prod = np.sum(self.v[self.all_possible_tags_dict[n_hist]])
-                            if dot_prod > MIN_EXP_VAL:
-                                self.exp_dict[n_hist] = np.exp(dot_prod).astype(np.float64)
-                            else:
-                                self.exp_dict[n_hist] = 0.
 
-                        cur_possible_hist_list.append(n_hist)
-                        norm_i += self.exp_dict[n_hist]
+                        dot_prod = np.sum(self.v[self.get_feature_from_hist(n_hist)])
 
-                    # fill prob_dict
-                    for hist in cur_possible_hist_list:
-                        if not self.prob_dict.get(hist, None):
-                            if len(cur_possible_hist_list) == 1:
-                                self.prob_dict[hist] = 1
-                            else:
-                                if np.isclose(norm_i, 0, rtol=BASE_PROB):
-                                    self.prob_dict[hist] = 1 / len(cur_possible_hist_list)
-                                else:
-                                    self.prob_dict[hist] = np.float64(self.exp_dict[hist] / norm_i)
+                        cur_hist_list.append((n_hist, dot_prod))
+            sorted_possible_hist_list = list(sorted(cur_hist_list, key=lambda x: x[1], reverse=True))[:self.beam_width]
+            filtered_ctag_set = {h.ctag for h, _ in sorted_possible_hist_list}
+            filtered_hist_list = [h for h, _ in cur_hist_list]
+            exp_arr = np.exp(np.array([dot_p for _, dot_p in cur_hist_list]))
+            # fill prob_dict
+            prob_arr = exp_arr/np.sum(exp_arr)
+            for hist, prob in zip(filtered_hist_list, prob_arr):
+                self.prob_dict[hist] = prob
 
             pptag_set = ptag_set
-            ptag_set = ctag_set
+            ptag_set = filtered_ctag_set
 
     def calc_res_tags(self, sentence):
         # print('calculating pi')
@@ -171,7 +159,11 @@ class Viterbi:
                         new_hist = History(cword=cur_hist.cword, pptag=t, ptag=u,
                                            ctag=v, nword=cur_hist.nword, pword=cur_hist.pword,
                                            nnword=cur_hist.nnword, ppword=cur_hist.ppword)
-                        if self.prob_dict[new_hist] < MIN_LOG_VAL:
+                        # if self.prob_dict[new_hist] < MIN_LOG_VAL:
+                        #     q = -np.inf
+                        # else:
+                        #     q = np.log(self.prob_dict[new_hist])
+                        if not self.prob_dict.get(new_hist, None):
                             q = -np.inf
                         else:
                             q = np.log(self.prob_dict[new_hist])
@@ -203,7 +195,7 @@ class Viterbi:
         return res_tags
 
     def predict(self, sentence):
-        self.pi_tables = np.full(shape=(len(sentence) + 1, len(self.tags_set), len(self.tags_set)), fill_value=-np.inf)
+        self.pi_tables = np.full(shape=(len(sentence) + 1, len(self.tags_list), len(self.tags_list)), fill_value=-np.inf)
         self.pi_tables[0, self.tag_to_index["*"], self.tag_to_index["*"]] = 0.
         self.bp_tables = np.full(shape=self.pi_tables.shape, fill_value=10**2, dtype=np.int)
         self.fill_prob_dict_from_sentence(sentence)
