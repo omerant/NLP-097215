@@ -68,7 +68,9 @@ class MaximumEntropyMarkovModel:
                 mat = hist_to_all_tag_feature_matrix_dict[new_hist_key]
                 exp_mat = np.exp(mat @ v)
                 prob_mat = exp_mat / np.sum(exp_mat)
-                expected_counts += prob_mat * mat
+                # expected_counts += prob_mat * mat
+                # expected_counts += np.squeeze(np.asarray(np.sum(mat.multiply(prob_mat[:, None]), axis=0)))
+                expected_counts += mat.dot(prob_mat)
 
         return expected_counts
 
