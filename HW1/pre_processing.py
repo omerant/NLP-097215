@@ -98,7 +98,7 @@ class FeatureStatistics:
         for sentence in self.history_sentence_list:
             for hist in sentence:
                 tag_set.add(hist.ctag)
-        return tag_set
+        return list(tag_set)
 
     def fill_word_possible_tag_dict(self):
         possible_tags_dict = defaultdict(OrderedDict)
@@ -179,37 +179,6 @@ class FeatureStatistics:
             rare_words_tags.update(self.word_possible_tag_dict[word].keys())
         return rare_words_tags
 
-    def replace_rare_word_with_unk_in_hist(self):
-        hist_sentence_list_rare = []
-        for idx, sentence in enumerate(self.history_sentence_list):
-            sentence_hist_list = []
-            for hist in sentence:
-                new_hist = hist
-                # REPLACE ALL RARE WORDS IN HISTORY WITH UNKNOWN
-                if hist.cword in self.rare_word_set:
-                    new_hist = History(cword=UNKNOWN_WORD, pptag=hist.pptag, ptag=hist.ptag, ctag=hist.ctag,
-                                       nword=hist.nword, pword=hist.pword, ppword=hist.ppword, nnword=hist.nnword)
-
-                if hist.pword in self.rare_word_set:
-                    new_hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag, ctag=hist.ctag,
-                                       nword=hist.nword, pword=UNKNOWN_WORD, ppword=hist.ppword, nnword=hist.nnword)
-
-                if hist.nword in self.rare_word_set:
-                    new_hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag, ctag=hist.ctag,
-                                       nword=UNKNOWN_WORD, pword=hist.pword, ppword=hist.ppword, nnword=hist.nnword)
-
-                if hist.ppword in self.rare_word_set:
-                    new_hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag, ctag=hist.ctag,
-                                       nword=hist.nword, pword=hist.pword, ppword=UNKNOWN_WORD, nnword=hist.nnword)
-
-                if hist.nnword in self.rare_word_set:
-                    new_hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag, ctag=hist.ctag,
-                                       nword=hist.nword, pword=hist.pword, ppword=hist.ppword, nnword=UNKNOWN_WORD)
-                sentence_hist_list.append(new_hist)
-            hist_sentence_list_rare.append(sentence_hist_list)
-
-        self.history_sentence_list = hist_sentence_list_rare
-
     def print_num_features(self):
         print('\n\n\n')
         total_feature_count = []
@@ -234,16 +203,19 @@ class FeatureStatistics:
                 gc.collect()
                 print(f'filling sentence number {idx_sentence}')
             for hist in sentence:
-                # tag_set = self.word_possible_tag_set[hist.cword]
                 tag_set = self.tags_set
                 cur_feature_vecs = []
                 cur_word_idx += 1
+                self.hist_to_feature_vec_dict[hist] = \
+                    csr_matrix(self.get_non_zero_feature_vec_indices_from_history(hist))
                 for ctag in tag_set:
                     new_hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag,
                                        ctag=ctag, nword=hist.nword, pword=hist.pword,
                                        nnword=hist.nnword, ppword=hist.ppword)
 
                     cur_feature_vecs.append(self.get_non_zero_feature_vec_indices_from_history(new_hist))
+
+
                 key_all_tag_hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag,
                                            ctag=None, nword=hist.nword, pword=hist.pword,
                                            nnword=hist.nnword, ppword=hist.ppword)
@@ -316,9 +288,6 @@ class FeatureStatistics:
         for k, v in sparse_feature_vec.items():
             feature_vec[k] = v
 
-        # non_zero_indices = np.nonzero(feature_vec)
-        # return non_zero_indices
-        # sparse_vec = csr_matrix(feature_vec)
         return feature_vec
 
     def pre_process(self, fill_possible_tag_dict: bool = True):

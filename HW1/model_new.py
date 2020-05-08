@@ -41,6 +41,7 @@ class MaximumEntropyMarkovModel:
         empirical_counts = csr_matrix(np.zeros(self.feature_statistics.num_features, dtype=np.float64))
         feature_vectors = [self.feature_statistics.hist_to_feature_vec_dict[hist] for sentence in
                            self.feature_statistics.history_sentence_list for hist in sentence]
+
         for feature_vector in feature_vectors:
             empirical_counts += feature_vector
 

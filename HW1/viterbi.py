@@ -9,7 +9,7 @@ np.random.seed(0)
 class Viterbi:
     def __init__(self, v, sentence_hist_list: [[History]], tags_set, all_possible_tags_dict,
                  get_feature_from_hist, word_possible_tag_set, word_possible_tag_with_threshold_dict,
-                 rare_words_tags, prob_dict, exp_dict, threshold, reg_lambda):
+                 rare_words_tags, prob_dict, exp_dict, threshold, reg_lambda, beam_width=6):
         self.v = v
         self.sentence_list = sentence_hist_list
         tags_set.add('*')
@@ -30,6 +30,7 @@ class Viterbi:
         self.dump_name = 'test1'
         self.threshold = threshold
         self.reg_lambda = reg_lambda
+        self.beam_width = beam_width
 
     def predict_all_test(self):
         print('starting inference')
@@ -102,15 +103,7 @@ class Viterbi:
         return acc, right_tag_list
 
     def get_possible_tag_set_from_word(self, word):
-        tag_set = None
-        if self.word_possible_tag_with_threshold_dict.get(word, None):
-            tag_set = {self.word_possible_tag_with_threshold_dict[word][0]}
-
-        elif self.word_possible_tag_set.get(word, None):
-            tag_set = self.word_possible_tag_set[word]
-
-        else:
-            tag_set = self.rare_words_tags
+        tag_set = self.tags_set - {'*'}
         return tag_set
 
     # def calc_tag_set_for_unknown(self, hist):
@@ -122,26 +115,6 @@ class Viterbi:
             if idx == 0:
                 pptag_set = {'*'}
                 ptag_set = {'*'}
-
-            # if not self.word_possible_tag_set.get(hist.cword, None):
-            #     hist = History(cword=UNKNOWN_WORD, pptag=hist.pptag, ptag=hist.ptag, ctag=hist.ctag,
-            #                    nword=hist.nword, pword=hist.pword, nnword=hist.nnword, ppword=hist.ppword)
-            #
-            # if not self.word_possible_tag_set.get(hist.pword, None):
-            #     hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag, ctag=hist.ctag,
-            #                    nword=hist.nword, pword=UNKNOWN_WORD, nnword=hist.nnword, ppword=hist.ppword)
-            #
-            # if not self.word_possible_tag_set.get(hist.nword, None):
-            #     hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag, ctag=hist.ctag,
-            #                    nword=UNKNOWN_WORD, pword=hist.pword, nnword=hist.nnword, ppword=hist.ppword)
-            #
-            # if not self.word_possible_tag_set.get(hist.ppword, None):
-            #     hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag, ctag=hist.ctag,
-            #                    nword=hist.nword, pword=hist.pword, nnword=hist.nnword, ppword=UNKNOWN_WORD)
-            #
-            # if not self.word_possible_tag_set.get(hist.nnword, None):
-            #     hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag, ctag=hist.ctag,
-            #                    nword=hist.nword, pword=hist.pword, nnword=UNKNOWN_WORD, ppword=hist.ppword)
 
             ctag_set = self.get_possible_tag_set_from_word(hist.cword)
             for pptag in pptag_set:
@@ -182,32 +155,7 @@ class Viterbi:
         # print('calculating pi')
         for ind, k in enumerate(range(1, len(sentence) + 1)):
             cur_hist = sentence[ind]
-            # check for unknown words:
 
-            # if not self.word_possible_tag_set.get(cur_hist.cword, None):
-            #     cur_hist = History(cword=UNKNOWN_WORD, pptag=cur_hist.pptag, ptag=cur_hist.ptag, ctag=cur_hist.ctag,
-            #                        nword=cur_hist.nword, pword=cur_hist.pword,
-            #                        nnword=cur_hist.nnword, ppword=cur_hist.ppword)
-            #
-            # if not self.word_possible_tag_set.get(cur_hist.pword, None):
-            #     cur_hist = History(cword=cur_hist.cword, pptag=cur_hist.pptag, ptag=cur_hist.ptag, ctag=cur_hist.ctag,
-            #                        nword=cur_hist.nword, pword=UNKNOWN_WORD,
-            #                        nnword=cur_hist.nnword, ppword=cur_hist.ppword)
-            #
-            # if not self.word_possible_tag_set.get(cur_hist.nword, None):
-            #     cur_hist = History(cword=cur_hist.cword, pptag=cur_hist.pptag, ptag=cur_hist.ptag, ctag=cur_hist.ctag,
-            #                        nword=UNKNOWN_WORD, pword=cur_hist.pword,
-            #                        nnword=cur_hist.nnword, ppword=cur_hist.ppword)
-            #
-            # if not self.word_possible_tag_set.get(cur_hist.ppword, None):
-            #     cur_hist = History(cword=cur_hist.cword, pptag=cur_hist.pptag, ptag=cur_hist.ptag, ctag=cur_hist.ctag,
-            #                        nword=cur_hist.nword, pword=cur_hist.pword,
-            #                        nnword=cur_hist.nnword, ppword=UNKNOWN_WORD)
-            #
-            # if not self.word_possible_tag_set.get(cur_hist.nnword, None):
-            #     cur_hist = History(cword=cur_hist.cword, pptag=cur_hist.pptag, ptag=cur_hist.ptag, ctag=cur_hist.ctag,
-            #                        nword=cur_hist.nword, pword=cur_hist.pword,
-            #                        nnword=UNKNOWN_WORD, ppword=cur_hist.ppword)
             if ind == 0:
                 pp_tag_set = {'*'}
                 p_tag_set = {'*'}
