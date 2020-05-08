@@ -101,12 +101,13 @@ class Viterbi:
         return acc, right_tag_list
 
     def get_possible_tag_set_from_word(self, word):
-        tag_set = None
-        if self.word_possible_tag_with_threshold_dict.get(word, None):
-            tag_set = {self.word_possible_tag_with_threshold_dict[word][0]}
-        else:
-            tag_set = self.tags_list[:-1]
-        return tag_set
+        # tag_set = None
+        # if self.word_possible_tag_with_threshold_dict.get(word, None):
+        #     tag_set = {self.word_possible_tag_with_threshold_dict[word][0]}
+        # else:
+        #     tag_set = self.tags_list[:-1]
+        tag_list = self.tags_list[:-1]
+        return tag_list
 
     def fill_prob_dict_from_sentence(self, sentence):
         for idx, hist in enumerate(sentence):
@@ -116,23 +117,23 @@ class Viterbi:
 
             ctag_set = self.get_possible_tag_set_from_word(hist.cword)
 
-            filtered_ctag_set = None
-            cur_hist_list = []
+            cur_hist_list_different_ctag = []
             for c_tag in ctag_set:
+                c_tag_res_list = []
                 for ptag in ptag_set:
                     for pptag in pptag_set:
                         n_hist = History(cword=hist.cword, pptag=pptag, ptag=ptag,
                                          nword=hist.nword, pword=hist.pword, ctag=c_tag,
                                          nnword=hist.nnword, ppword=hist.ppword)
-
                         dot_prod = np.sum(self.v[self.get_feature_from_hist(n_hist)])
+                        c_tag_res_list.append((n_hist, dot_prod))
+                cur_hist_list_different_ctag.append(max(c_tag_res_list, key=lambda x: x[1]))
 
-                        cur_hist_list.append((n_hist, dot_prod))
-            slice_idx = min(self.beam_width, len(ctag_set))
-            sorted_possible_hist_list = list(sorted(cur_hist_list, key=lambda x: x[1], reverse=True))[:slice_idx]
+            slice_idx = self.beam_width
+            sorted_possible_hist_list = list(sorted(cur_hist_list_different_ctag, key=lambda x: x[1], reverse=True))[:slice_idx]
             filtered_ctag_set = {h.ctag for h, _ in sorted_possible_hist_list}
-            filtered_hist_list = [h for h, _ in cur_hist_list]
-            dot_p_arr = np.array([dot_p for _, dot_p in cur_hist_list]).astype(np.float64)
+            filtered_hist_list = [h for h, _ in sorted_possible_hist_list]
+            dot_p_arr = np.array([dot_p for _, dot_p in sorted_possible_hist_list]).astype(np.float64)
 
             exp_arr = np.exp(dot_p_arr-np.max(dot_p_arr)).astype(np.float64)
             # fill prob_dict
@@ -142,7 +143,6 @@ class Viterbi:
 
             pptag_set = ptag_set
             ptag_set = filtered_ctag_set
-
 
     def calc_res_tags(self, sentence):
         # print('calculating pi')
@@ -156,8 +156,6 @@ class Viterbi:
             cur_tag_set = self.get_possible_tag_set_from_word(cur_hist.cword)
 
             for v in cur_tag_set:
-                if v == 13 or v == '13':
-                    print(f'cur tag set: {cur_tag_set}')
                 for u in p_tag_set:
                     max_pi_mul_q_val = -np.inf
                     max_t_index = self.tag_to_index['NN']#10**3
@@ -166,10 +164,7 @@ class Viterbi:
                         new_hist = History(cword=cur_hist.cword, pptag=t, ptag=u,
                                            ctag=v, nword=cur_hist.nword, pword=cur_hist.pword,
                                            nnword=cur_hist.nnword, ppword=cur_hist.ppword)
-                        # if self.prob_dict[new_hist] < MIN_LOG_VAL:
-                        #     q = -np.inf
-                        # else:
-                        #     q = np.log(self.prob_dict[new_hist])
+
                         if not self.prob_dict.get(new_hist, None):
                             q = -np.inf
                         else:

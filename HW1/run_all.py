@@ -42,15 +42,15 @@ def predict(train_path, threshold, reg_lambda, test_path, conf, beam_width):
     ft_statistics = FeatureStatistics(input_file_path=train_path, threshold=threshold, config=conf)
     ft_statistics.pre_process(fill_possible_tag_dict=False)
     test_sentence_hist_list = FeatureStatistics.fill_ordered_history_list(file_path=test_path, is_test=True)
-    tag_set = ft_statistics.tags_list
+    tag_list = ft_statistics.tags_list
     all_possible_tags_dict = ft_statistics.hist_to_feature_vec_dict
-    get_ft_from_hist_func = ft_statistics.get_non_zero_feature_vec_indices_from_history
+    get_ft_from_hist_func = ft_statistics.get_non_zero_indices_from_history
     word_possible_tag_set = ft_statistics.word_possible_tag_set
     word_possible_tag_with_threshold_dict = ft_statistics.word_possible_tag_with_threshold_dict
     rare_words_tags = ft_statistics.rare_words_tags
 
     viterbi = Viterbi(
-        v=v, sentence_hist_list=test_sentence_hist_list, tags_list=tag_set,
+        v=v, sentence_hist_list=test_sentence_hist_list, tags_list=tag_list,
         all_possible_tags_dict=all_possible_tags_dict, get_feature_from_hist=get_ft_from_hist_func,
         word_possible_tag_set=word_possible_tag_set,
         word_possible_tag_with_threshold_dict=word_possible_tag_with_threshold_dict,
