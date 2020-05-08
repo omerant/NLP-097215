@@ -70,7 +70,7 @@ class MaximumEntropyMarkovModel:
                 prob_mat = exp_mat / np.sum(exp_mat)
                 # expected_counts += prob_mat * mat
                 # expected_counts += np.squeeze(np.asarray(np.sum(mat.multiply(prob_mat[:, None]), axis=0)))
-                expected_counts += mat.dot(prob_mat)
+                expected_counts += mat.T @ (prob_mat)
 
         return expected_counts
 
