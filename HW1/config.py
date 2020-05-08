@@ -30,7 +30,7 @@ class BaseCfg(Cfg):
         # ft.ContainsSymbolDict,
         # ft.ContainsOnlySymbolsDict,
         # ft.TwoPreviousTagsAndCurrentWord,
-        ft.NextWordCommasDict
+        # ft.NextWordCommasDict
     }
 
 

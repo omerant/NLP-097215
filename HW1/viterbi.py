@@ -108,7 +108,6 @@ class Viterbi:
             tag_set = self.tags_list[:-1]
         return tag_set
 
-    @timeit
     def fill_prob_dict_from_sentence(self, sentence):
         for idx, hist in enumerate(sentence):
             if idx == 0:
@@ -134,19 +133,16 @@ class Viterbi:
             filtered_ctag_set = {h.ctag for h, _ in sorted_possible_hist_list}
             filtered_hist_list = [h for h, _ in cur_hist_list]
             dot_p_arr = np.array([dot_p for _, dot_p in cur_hist_list]).astype(np.float64)
-            try:
-                exp_arr = np.exp(dot_p_arr-np.max(dot_p_arr)).astype(np.float64)
-            # fill prob_dict
-                prob_arr = exp_arr/np.sum(exp_arr)
-                for hist, prob in zip(filtered_hist_list, prob_arr):
-                    self.prob_dict[hist] = prob
 
-                pptag_set = ptag_set
-                ptag_set = filtered_ctag_set
-            except FloatingPointError:
-                print(f'EXCEPTION FloatingPointError WAS RAISED')
-                max_hist = filtered_hist_list[np.argmax(dot_p_arr)]
-                self.prob_dict[max_hist] = 1
+            exp_arr = np.exp(dot_p_arr-np.max(dot_p_arr)).astype(np.float64)
+            # fill prob_dict
+            prob_arr = exp_arr/np.sum(exp_arr)
+            for hist, prob in zip(filtered_hist_list, prob_arr):
+                self.prob_dict[hist] = prob
+
+            pptag_set = ptag_set
+            ptag_set = filtered_ctag_set
+
 
     def calc_res_tags(self, sentence):
         # print('calculating pi')
