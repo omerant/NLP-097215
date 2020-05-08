@@ -101,10 +101,12 @@ class Viterbi:
         return acc, right_tag_list
 
     def get_possible_tag_set_from_word(self, word):
-        tag_set = self.tags_list[:-1]
+        tag_set = None
+        if self.word_possible_tag_with_threshold_dict.get(word, None):
+            tag_set = {self.word_possible_tag_with_threshold_dict[word][0]}
+        else:
+            tag_set = self.tags_list[:-1]
         return tag_set
-
-    # def calc_tag_set_for_unknown(self, hist):
 
     @timeit
     def fill_prob_dict_from_sentence(self, sentence):
@@ -127,17 +129,24 @@ class Viterbi:
                         dot_prod = np.sum(self.v[self.get_feature_from_hist(n_hist)])
 
                         cur_hist_list.append((n_hist, dot_prod))
-            sorted_possible_hist_list = list(sorted(cur_hist_list, key=lambda x: x[1], reverse=True))[:self.beam_width]
+            slice_idx = min(self.beam_width, len(ctag_set))
+            sorted_possible_hist_list = list(sorted(cur_hist_list, key=lambda x: x[1], reverse=True))[:slice_idx]
             filtered_ctag_set = {h.ctag for h, _ in sorted_possible_hist_list}
             filtered_hist_list = [h for h, _ in cur_hist_list]
-            exp_arr = np.exp(np.array([dot_p for _, dot_p in cur_hist_list]))
+            dot_p_arr = np.array([dot_p for _, dot_p in cur_hist_list]).astype(np.float64)
+            try:
+                exp_arr = np.exp(dot_p_arr-np.max(dot_p_arr)).astype(np.float64)
             # fill prob_dict
-            prob_arr = exp_arr/np.sum(exp_arr)
-            for hist, prob in zip(filtered_hist_list, prob_arr):
-                self.prob_dict[hist] = prob
+                prob_arr = exp_arr/np.sum(exp_arr)
+                for hist, prob in zip(filtered_hist_list, prob_arr):
+                    self.prob_dict[hist] = prob
 
-            pptag_set = ptag_set
-            ptag_set = filtered_ctag_set
+                pptag_set = ptag_set
+                ptag_set = filtered_ctag_set
+            except FloatingPointError:
+                print(f'EXCEPTION FloatingPointError WAS RAISED')
+                max_hist = filtered_hist_list[np.argmax(dot_p_arr)]
+                self.prob_dict[max_hist] = 1
 
     def calc_res_tags(self, sentence):
         # print('calculating pi')
@@ -151,6 +160,8 @@ class Viterbi:
             cur_tag_set = self.get_possible_tag_set_from_word(cur_hist.cword)
 
             for v in cur_tag_set:
+                if v == 13 or v == '13':
+                    print(f'cur tag set: {cur_tag_set}')
                 for u in p_tag_set:
                     max_pi_mul_q_val = -np.inf
                     max_t_index = self.tag_to_index['NN']#10**3
@@ -173,13 +184,20 @@ class Viterbi:
                         if res > max_pi_mul_q_val:
                             max_pi_mul_q_val = res
                             max_t_index = t_index
-                    # if max_t_index == 10**3:
-                    #     print(f'CURRENT WORD: {cur_hist.cword}')
-                    #     raise Exception()
+                    if max_t_index == 10**2:
+                        print(f'CURRENT WORD: {cur_hist.cword}')
+                        raise Exception()
                     # assert max_t_index != 10**3
                     # print(f'max index: {max_t_index}')
-                    self.pi_tables[k, self.tag_to_index[u], self.tag_to_index[v]] = max_pi_mul_q_val
-                    self.bp_tables[k, self.tag_to_index[u], self.tag_to_index[v]] = max_t_index
+                    try:
+                        self.pi_tables[k, self.tag_to_index[u], self.tag_to_index[v]] = max_pi_mul_q_val
+                        self.bp_tables[k, self.tag_to_index[u], self.tag_to_index[v]] = max_t_index
+                    except:
+                        print(f' k is {k}')
+                        print(f' u is {u}, index is {self.tag_to_index[u]}')
+                        print(f' v is {v}, ')
+                        print(f' current word is {cur_hist.cword}')
+                        raise Exception('borat')
             pp_tag_set = p_tag_set
             p_tag_set = cur_tag_set
         max_ind = np.argmax(self.pi_tables[-1, :, :])
@@ -194,6 +212,7 @@ class Viterbi:
         res_tags = list(reversed([self.index_to_tag[res] for res in res_numbers]))
         return res_tags
 
+    @timeit
     def predict(self, sentence):
         self.pi_tables = np.full(shape=(len(sentence) + 1, len(self.tags_list), len(self.tags_list)), fill_value=-np.inf)
         self.pi_tables[0, self.tag_to_index["*"], self.tag_to_index["*"]] = 0.

@@ -26,7 +26,7 @@ class FeatureStatistics:
         self.rare_words_tags = self.rare_words_possible_tags()
         # self.replace_rare_word_with_unk_in_hist()
         # call again to replace with UNK
-        self.tags_set = self.fill_tags_set()
+        self.tags_list = self.fill_tags_list()
 
         self.word_possible_tag_set = self.fill_word_possible_tag_set()
         self.word_possible_tag_with_threshold_dict = self.fill_possible_tags_with_certainty_dict()
@@ -93,7 +93,7 @@ class FeatureStatistics:
                 hist_sentence_list.append(new_sentence_hist_list)
         return hist_sentence_list
 
-    def fill_tags_set(self):
+    def fill_tags_list(self):
         tag_set = set()
         for sentence in self.history_sentence_list:
             for hist in sentence:
@@ -191,6 +191,12 @@ class FeatureStatistics:
 
         print(f'num_total_features: {sum(total_feature_count)}')
 
+    def get_tag_set_from_hist(self, hist):
+        if self.word_possible_tag_with_threshold_dict.get(hist.cword, None):
+            return self.word_possible_tag_with_threshold_dict[hist.cword]
+        else:
+            return self.tags_list
+
     def fill_all_possible_tags_dict(self, hist_ft_dict_path, hist_dict_name):
         print('filling all_possible_prev_tags_dict')
         dict_folder = 'hist_feature_dict'
@@ -203,7 +209,7 @@ class FeatureStatistics:
                 gc.collect()
                 print(f'filling sentence number {idx_sentence}')
             for hist in sentence:
-                tag_set = self.tags_set
+                tag_set = self.tags_list
                 cur_feature_vecs = []
                 cur_word_idx += 1
                 self.hist_to_feature_vec_dict[hist] = \
