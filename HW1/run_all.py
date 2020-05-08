@@ -43,7 +43,7 @@ def predict(train_path, threshold, reg_lambda, test_path, conf):
     test_sentence_hist_list = FeatureStatistics.fill_ordered_history_list(file_path=test_path, is_test=True)
     tag_set = ft_statistics.tags_set
     all_possible_tags_dict = ft_statistics.hist_to_feature_vec_dict
-    get_ft_from_hist_func = ft_statistics.get_non_zero_sparse_feature_vec_indices_from_history
+    get_ft_from_hist_func = ft_statistics.get_non_zero_feature_vec_indices_from_history
     word_possible_tag_set = ft_statistics.word_possible_tag_set
     word_possible_tag_with_threshold_dict = ft_statistics.word_possible_tag_with_threshold_dict
     rare_words_tags = ft_statistics.rare_words_tags

@@ -7,7 +7,8 @@ import features as ft
 import numpy as np
 from features import WordAndTagConstants
 from utils import History, UNKNOWN_WORD
-from scipy.sparse import csr_matrix, coo_matrix
+from scipy.sparse import csr_matrix
+import gc
 np.random.seed(0)
 
 
@@ -229,6 +230,7 @@ class FeatureStatistics:
 
         for idx, sentence in enumerate(self.history_sentence_list):
             if idx % 500 == 0:
+                gc.collect()
                 print(f'filling sentence number {idx}')
 
             for hist in sentence:
@@ -240,16 +242,19 @@ class FeatureStatistics:
                                        ctag=ctag, nword=hist.nword, pword=hist.pword,
                                        nnword=hist.nnword, ppword=hist.ppword)
                     if self.hist_to_feature_vec_dict.get(new_hist, None) is None:
-                        self.hist_to_feature_vec_dict[new_hist] = \
-                            self.get_non_zero_sparse_feature_vec_indices_from_history(new_hist)
-                    cur_feature_vecs.append(self.hist_to_feature_vec_dict[new_hist].toarray().squeeze(0).astype(float))
+                        self.hist_to_feature_vec_dict[new_hist] = idx
+
+                    cur_feature_vecs.append(self.get_non_zero_feature_vec_indices_from_history(new_hist))
                 key_all_tag_hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag,
                                            ctag=None, nword=hist.nword, pword=hist.pword,
                                            nnword=hist.nnword, ppword=hist.ppword)
+                
                 # fill dict that contains matrices with dim num_tagsXnum_features, it will be used to speed up operations
                 if self.hist_to_all_tag_feature_matrix_dict.get(key_all_tag_hist, None) is None:
-                    res = csr_matrix(cur_feature_vecs)
-                    self.hist_to_all_tag_feature_matrix_dict[key_all_tag_hist] = res
+                    sparse_res = csr_matrix(cur_feature_vecs)
+
+                    # sparse_mem = sparse_res.data.nbytes + sparse_res.indptr.nbytes + sparse_res.indices.nbytes
+                    self.hist_to_all_tag_feature_matrix_dict[key_all_tag_hist] = sparse_res
 
         if not os.path.isdir(hist_ft_dict_path):
             os.makedirs(hist_ft_dict_path)
@@ -294,7 +299,7 @@ class FeatureStatistics:
             if fd_name != 'fd_word_tag':
                 fd.dict = filter_dict(fd.dict)
 
-    def get_non_zero_sparse_feature_vec_indices_from_history(self, history: ft.History):
+    def get_non_zero_feature_vec_indices_from_history(self, history: ft.History):
         sparse_feature_vec = OrderedDict()
         feature_dicts = sorted([attr for attr in dir(self) if attr.startswith('fd')])
         start_idx = 0
@@ -314,8 +319,8 @@ class FeatureStatistics:
 
         # non_zero_indices = np.nonzero(feature_vec)
         # return non_zero_indices
-        sparse_vec = csr_matrix(feature_vec)
-        return sparse_vec
+        # sparse_vec = csr_matrix(feature_vec)
+        return feature_vec
 
     def pre_process(self, fill_possible_tag_dict: bool = True):
         self.fill_feature_dicts()
