@@ -228,27 +228,26 @@ class FeatureStatistics:
         if not os.path.isdir(dict_folder):
             os.mkdir(dict_folder)
 
-        for idx, sentence in enumerate(self.history_sentence_list):
-            if idx % 500 == 0:
+        cur_word_idx = 0
+        for idx_sentence, sentence in enumerate(self.history_sentence_list):
+            if idx_sentence % 500 == 0:
                 gc.collect()
-                print(f'filling sentence number {idx}')
-
+                print(f'filling sentence number {idx_sentence}')
             for hist in sentence:
                 # tag_set = self.word_possible_tag_set[hist.cword]
                 tag_set = self.tags_set
                 cur_feature_vecs = []
+                cur_word_idx += 1
                 for ctag in tag_set:
                     new_hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag,
                                        ctag=ctag, nword=hist.nword, pword=hist.pword,
                                        nnword=hist.nnword, ppword=hist.ppword)
-                    if self.hist_to_feature_vec_dict.get(new_hist, None) is None:
-                        self.hist_to_feature_vec_dict[new_hist] = idx
 
                     cur_feature_vecs.append(self.get_non_zero_feature_vec_indices_from_history(new_hist))
                 key_all_tag_hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag,
                                            ctag=None, nword=hist.nword, pword=hist.pword,
                                            nnword=hist.nnword, ppword=hist.ppword)
-                
+
                 # fill dict that contains matrices with dim num_tagsXnum_features, it will be used to speed up operations
                 if self.hist_to_all_tag_feature_matrix_dict.get(key_all_tag_hist, None) is None:
                     sparse_res = csr_matrix(cur_feature_vecs)
