@@ -13,7 +13,7 @@ from re import split
 class ResultsHandler:
     def __init__(self):
         self.res_path = 'res'
-        self.dump_name = 'known_all_features/test1_10_10.0'
+        self.dump_name = 'test1_10_0.1'
         self.cf_name = 'cf'
 
     def get_res(self):
@@ -102,6 +102,6 @@ class ResultsHandler:
 res = ResultsHandler()
 # res.new_words()
 res.get_res()
-# res.plot_confusion_matrix()
+res.plot_confusion_matrix()
 res.get_most_mistakes()
-# res.acc_per_label()
+res.acc_per_label()

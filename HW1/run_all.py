@@ -13,7 +13,7 @@ parser.add_argument("--train-path", help="path to training data", type=str, requ
 parser.add_argument("--test-path", help="path to test data", type=str, required=True)
 parser.add_argument("--reg-lambda", help="regularization lambda", type=float, required=True)
 parser.add_argument("--config", help="regularization lambda", choices=['base', 'nps', 'comp1', 'comp2'], required=True)
-
+parser.add_argument("--beam", help="beam width", type=int, required=True)
 parser.add_argument("--run-all", help="run pre_process + train + predict", type=bool, default=False)
 parser.add_argument("--pp", help="run only pre_process", type=bool, required=False, default=False)
 parser.add_argument("--tr", help="run only train", type=bool, required=False, default=False)
@@ -35,7 +35,7 @@ def train(train_path, threshold, reg_lambda, conf):
 
 
 @timeit
-def predict(train_path, threshold, reg_lambda, test_path, conf):
+def predict(train_path, threshold, reg_lambda, test_path, conf, beam_width):
     v = MaximumEntropyMarkovModel.load_v_from_pickle(dump_weights_path='weights', threshold=args.threshold,
                                                      reg_lambda=reg_lambda)
     ft_statistics = FeatureStatistics(input_file_path=train_path, threshold=threshold, config=conf)
@@ -55,15 +55,16 @@ def predict(train_path, threshold, reg_lambda, test_path, conf):
         word_possible_tag_with_threshold_dict=word_possible_tag_with_threshold_dict,
         rare_words_tags=rare_words_tags,
         threshold=args.threshold,
-        reg_lambda=args.reg_lambda
+        reg_lambda=args.reg_lambda,
+        beam_width=beam_width
     )
     viterbi.predict_all_test()
 
 
-def run_all(train_path, threshold, reg_lambda, test_path):
+def run_all(train_path, threshold, reg_lambda, test_path, beam):
     pre_process(train_path=train_path, threshold=threshold)
     train(train_path=train_path, threshold=threshold, reg_lambda=reg_lambda)
-    predict(train_path=train_path, threshold=threshold, reg_lambda=reg_lambda, test_path=test_path)
+    predict(train_path=train_path, threshold=threshold, reg_lambda=reg_lambda, test_path=test_path, beam_width=beam)
 # run example:
 # python run_all.py --th 10 --tra data/train1.wtag --te data/test1.wtag --reg-lambda 0.01 --run-all true --conf base
 # pre_process  only
@@ -86,7 +87,7 @@ if __name__ == '__main__':
         pre_process(train_path=args.train_path, threshold=args.threshold, config=config)
         train(train_path=args.train_path, threshold=args.threshold, reg_lambda=args.reg_lambda, conf=config)
         predict(train_path=args.train_path, threshold=args.threshold, reg_lambda=args.reg_lambda,
-                test_path=args.test_path, conf=config)
+                test_path=args.test_path, conf=config, beam_width=args.beam)
     elif args.pp:
         print('RUNNING ONLY PRE PROCESS')
         pre_process(train_path=args.train_path, threshold=args.threshold, config=config)
@@ -96,4 +97,4 @@ if __name__ == '__main__':
     elif args.pr:
         print('RUNNING ONLY PREDICT')
         predict(train_path=args.train_path, threshold=args.threshold, reg_lambda=args.reg_lambda,
-                test_path=args.test_path, conf=config)
+                test_path=args.test_path, conf=config, beam_width=args.beam)

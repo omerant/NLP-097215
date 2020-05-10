@@ -13,6 +13,7 @@ class Viterbi:
         self.v = v
         self.sentence_list = sentence_hist_list
         tags_list.append('*')
+        tags_list.append('**')
         self.tags_list = tags_list
         self.all_possible_tags_dict = all_possible_tags_dict
         self.get_feature_from_hist = get_feature_from_hist
@@ -101,89 +102,53 @@ class Viterbi:
         return acc, right_tag_list
 
     def get_possible_tag_set_from_word(self, word):
-        tag_set = self.tags_list[:-1]
+        tag_set = self.tags_list[:-2]
         return tag_set
 
     # def calc_tag_set_for_unknown(self, hist):
 
-    @timeit
-    def fill_prob_dict_from_sentence(self, sentence):
-        for idx, hist in enumerate(sentence):
-            if idx == 0:
-                pptag_set = {'*'}
-                ptag_set = {'*'}
-
-            ctag_set = self.get_possible_tag_set_from_word(hist.cword)
-
-            filtered_ctag_set = None
-            cur_hist_list = []
-            for c_tag in ctag_set:
-                for ptag in ptag_set:
-                    for pptag in pptag_set:
-                        n_hist = History(cword=hist.cword, pptag=pptag, ptag=ptag,
-                                         nword=hist.nword, pword=hist.pword, ctag=c_tag,
-                                         nnword=hist.nnword, ppword=hist.ppword)
-
-                        dot_prod = np.sum(self.v[self.get_feature_from_hist(n_hist)])
-
-                        cur_hist_list.append((n_hist, dot_prod))
-            sorted_possible_hist_list = list(sorted(cur_hist_list, key=lambda x: x[1], reverse=True))[:self.beam_width]
-            filtered_ctag_set = {h.ctag for h, _ in sorted_possible_hist_list}
-            filtered_hist_list = [h for h, _ in cur_hist_list]
-            exp_arr = np.exp(np.array([dot_p for _, dot_p in cur_hist_list]))
-            # fill prob_dict
-            prob_arr = exp_arr/np.sum(exp_arr)
-            for hist, prob in zip(filtered_hist_list, prob_arr):
-                self.prob_dict[hist] = prob
-
-            pptag_set = ptag_set
-            ptag_set = filtered_ctag_set
+    # @timeit
+    def calc_prob_for_hist(self, cur_hist, prev_pi, u):
+        pptag_len = len(prev_pi)
+        cur_pi = []
+        for pptag in range(pptag_len):
+            if prev_pi[pptag] == 0:
+                cur_pi.append(np.zeros(len(self.tags_list),dtype=np.float64))
+                continue
+            pptag = self.index_to_tag[pptag]
+            dots = []
+            for c_tag in self.get_possible_tag_set_from_word(cur_hist.cword):
+                n_hist = History(cword=cur_hist.cword, pptag=pptag, ptag=u,
+                                 nword=cur_hist.nword, pword=cur_hist.pword, ctag=c_tag,
+                                 nnword=cur_hist.nnword, ppword=cur_hist.ppword)
+                dot_prod = self.v.dot(self.get_feature_from_hist(n_hist))
+                dots.append(dot_prod)
+            exp_arr = np.exp(np.array(dots))
+            prob_arr = exp_arr / np.sum(exp_arr)
+            prob_arr = np.append(np.append(prob_arr,0),0)
+            cur_pi.append(prev_pi[self.tag_to_index[pptag]]*prob_arr)
+        return np.array(cur_pi)
 
     def calc_res_tags(self, sentence):
-        # print('calculating pi')
+        beam_set = {'*'}
         for ind, k in enumerate(range(1, len(sentence) + 1)):
             cur_hist = sentence[ind]
+            for u in beam_set:
+                prev_pi = self.pi_tables[k-1, :, self.tag_to_index[u]]
+                probs = self.calc_prob_for_hist(cur_hist, prev_pi, u)
+                self.pi_tables[k, self.tag_to_index[u], :] = np.max(probs, axis=0)
+                self.bp_tables[k, self.tag_to_index[u], :] = np.argmax(probs, axis=0)
 
-            if ind == 0:
-                pp_tag_set = {'*'}
-                p_tag_set = {'*'}
+            beam_idxs = np.argsort(self.pi_tables[k, [self.tag_to_index[u] for u in beam_set], :].flatten())
+            beam_idxs = np.flip(beam_idxs % self.pi_tables.shape[-1])
+            beam_idxs = beam_idxs[:self.beam_width ** 2]
+            beam_set = set()
+            for i,tag_idx in enumerate(beam_idxs):
+                beam_set.add(self.index_to_tag[beam_idxs[i]])
+                if len(beam_set) == self.beam_width:
+                    break
 
-            cur_tag_set = self.get_possible_tag_set_from_word(cur_hist.cword)
-
-            for v in cur_tag_set:
-                for u in p_tag_set:
-                    max_pi_mul_q_val = -np.inf
-                    max_t_index = self.tag_to_index['NN']#10**3
-                    for t in pp_tag_set:
-                        t_index = self.tag_to_index[t]
-                        new_hist = History(cword=cur_hist.cword, pptag=t, ptag=u,
-                                           ctag=v, nword=cur_hist.nword, pword=cur_hist.pword,
-                                           nnword=cur_hist.nnword, ppword=cur_hist.ppword)
-                        # if self.prob_dict[new_hist] < MIN_LOG_VAL:
-                        #     q = -np.inf
-                        # else:
-                        #     q = np.log(self.prob_dict[new_hist])
-                        if not self.prob_dict.get(new_hist, None):
-                            q = -np.inf
-                        else:
-                            q = np.log(self.prob_dict[new_hist])
-
-                        pi = self.pi_tables[k - 1, t_index, self.tag_to_index[u]]
-                        res = q + pi
-                        if res > max_pi_mul_q_val:
-                            max_pi_mul_q_val = res
-                            max_t_index = t_index
-                    # if max_t_index == 10**3:
-                    #     print(f'CURRENT WORD: {cur_hist.cword}')
-                    #     raise Exception()
-                    # assert max_t_index != 10**3
-                    # print(f'max index: {max_t_index}')
-                    self.pi_tables[k, self.tag_to_index[u], self.tag_to_index[v]] = max_pi_mul_q_val
-                    self.bp_tables[k, self.tag_to_index[u], self.tag_to_index[v]] = max_t_index
-            pp_tag_set = p_tag_set
-            p_tag_set = cur_tag_set
         max_ind = np.argmax(self.pi_tables[-1, :, :])
-
         t_n_m_1, t_n = np.unravel_index(max_ind, self.pi_tables[-1, :, :].shape)
         res_numbers = [t_n, t_n_m_1]
         # print('calculating bp')
@@ -195,17 +160,18 @@ class Viterbi:
         return res_tags
 
     def predict(self, sentence):
-        self.pi_tables = np.full(shape=(len(sentence) + 1, len(self.tags_list), len(self.tags_list)), fill_value=-np.inf)
-        self.pi_tables[0, self.tag_to_index["*"], self.tag_to_index["*"]] = 0.
-        self.bp_tables = np.full(shape=self.pi_tables.shape, fill_value=10**2, dtype=np.int)
-        self.fill_prob_dict_from_sentence(sentence)
+        self.pi_tables = np.full(shape=(len(sentence) + 1, len(self.tags_list), len(self.tags_list)), fill_value=0.)
+        self.pi_tables[0, self.tag_to_index["**"], self.tag_to_index["*"]] = 1.
+        self.bp_tables = np.zeros(shape=self.pi_tables.shape, dtype=np.int)
+        # self.fill_prob_dict_from_sentence(sentence)
         res_tags = self.calc_res_tags(sentence)
         return res_tags
 
     def dump_res(self, all_tagged_res_list, all_gt_tags, all_res_tags, sentence_list):
         if not os.path.isdir(self.res_path):
             os.makedirs(self.res_path)
-        dump_name = self.dump_name + '_' + str(self.threshold) + '_' + str(self.reg_lambda)
+        dump_name = self.dump_name + '_threshold_' + str(self.threshold) + '_lambda_' + str(self.reg_lambda)\
+                    + '_beam_' + str(self.beam_width)
         dump_path = os.path.join(self.res_path, dump_name)
         with open(dump_path, 'wb') as f:
             res = (all_tagged_res_list, all_gt_tags, all_res_tags, sentence_list)

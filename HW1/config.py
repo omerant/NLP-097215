@@ -17,8 +17,8 @@ class BaseCfg(Cfg):
         ft.WordsSuffixTagsCountDict,
         ft.PrevWordCurrTagCountDict,
         ft.NextWordCurrTagCountDict,
-        ft.DoublePrevWordCurrTagCountDict,
-        ft.DoubleNextWordCurrTagCountDict,
+        # ft.DoublePrevWordCurrTagCountDict,
+        # ft.DoubleNextWordCurrTagCountDict,
         ft.SkipBigramCountDict,
         # letters digits
         ft.HasFirstCapitalLetterDict,
@@ -30,7 +30,7 @@ class BaseCfg(Cfg):
         # ft.ContainsSymbolDict,
         # ft.ContainsOnlySymbolsDict,
         # ft.TwoPreviousTagsAndCurrentWord,
-        ft.NextWordCommasDict
+        # ft.NextWordCommasDict
     }
 
 
