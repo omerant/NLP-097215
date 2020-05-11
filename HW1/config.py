@@ -26,7 +26,7 @@ class BaseCfg(Cfg):
         ft.HasDigitDict,
         ft.HasOnlyDigitDict,
         ft.ContainsHyphenDict,
-        # ft.IsFirstWordDict,
+        ft.IsFirstWordDict,
         # ft.ContainsSymbolDict,
         # ft.ContainsOnlySymbolsDict,
         # ft.TwoPreviousTagsAndCurrentWord,

@@ -80,7 +80,8 @@ class Viterbi:
         # print(f'total accuracy: {sum(all_acc_list)/len(all_acc_list)}')
         print(f'precent of known words in corpus: {100 * len(all_right_tag_list_known)/len(all_right_tag_list)}')
         print(f'precent of unknown words in corpus: {100 * len(all_right_tag_list_unknown) / len(all_right_tag_list)}')
-        print(f'total accuracy: {self._calc_acc(all_right_tag_list)}')
+        self.total_acc = self._calc_acc(all_right_tag_list)
+        print(f'total accuracy: {self.total_acc}')
         print(f'known words accuracy: {self._calc_acc(all_right_tag_list_known)}')
         print(f'unknown words accuracy: {self._calc_acc(all_right_tag_list_unknown)}')
         self.dump_res(all_tagged_res_list, all_gt_tags, all_res_tags, self.sentence_list)
@@ -171,7 +172,7 @@ class Viterbi:
         if not os.path.isdir(self.res_path):
             os.makedirs(self.res_path)
         dump_name = self.dump_name + '_threshold_' + str(self.threshold) + '_lambda_' + str(self.reg_lambda)\
-                    + '_beam_' + str(self.beam_width)
+                    + '_beam_' + str(self.beam_width) + '_acc_' + str(self.total_acc)
         dump_path = os.path.join(self.res_path, dump_name)
         with open(dump_path, 'wb') as f:
             res = (all_tagged_res_list, all_gt_tags, all_res_tags, sentence_list)
