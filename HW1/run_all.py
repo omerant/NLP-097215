@@ -114,4 +114,4 @@ if __name__ == '__main__':
     elif args.pr:
         print('RUNNING ONLY PREDICT')
         predict(train_path=args.train_path, threshold=args.threshold, reg_lambda=args.reg_lambda,
-                test_path=args.test_path, conf=config, beam_width=args.beam, file=args.file)
+                test_path=args.test_path, conf=config, beam_width=args.beam, file_name=args.file)

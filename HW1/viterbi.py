@@ -105,23 +105,76 @@ class Viterbi:
                all_right_tag_list_known,
                all_right_tag_list_unknown))
 
+    # def predict_all_test(self, num_workers, is_comp):
+    #     """
+    #     main method that we use for prediction
+    #     :param num_workers: num of workers that calculate in parallel
+    #     :return:
+    #     """
+    #     p = mp.Pool(num_workers)
+    #     manager = mp.Manager()
+    #     q = manager.Queue()
+    #     args = self._prep_args(num_workers=num_workers, q=q)
+    #     p.starmap(func=self._calc_predict, iterable=args)
+    #     p.close()
+    #     p.join()
+    #     print('starting inference')
+    #     all_res_tags = []
+    #     all_acc_list = []
+    #     all_tagged_res_list = []# will be saved to file
+    #     all_gt_tags = []
+    #     all_gt_tags_known = []
+    #     all_gt_tags_unknown = []
+    #
+    #     all_right_tag_list = []
+    #     all_right_tag_list_known = []
+    #     all_right_tag_list_unknown = []
+    #
+    #     res_list = []
+    #     while q.qsize() > 0:
+    #         res_list.append(q.get())
+    #     # sort to make sure that the results are in correct order
+    #     res_list = list(sorted(res_list, key=lambda x: x[0]))
+    #
+    #     # update results from all processes
+    #     for _, all_res_tags_cur, \
+    #         all_acc_list_cur, \
+    #         all_tagged_res_list_cur, \
+    #         all_gt_tags_cur, \
+    #         all_gt_tags_known_cur, \
+    #         all_gt_tags_unknown_cur, \
+    #         all_right_tag_list_cur, \
+    #         all_right_tag_list_known_cur, \
+    #         all_right_tag_list_unknown_cur in res_list:
+    #
+    #
+    #         all_res_tags += all_res_tags_cur
+    #         all_acc_list += all_acc_list_cur
+    #         all_tagged_res_list += all_tagged_res_list_cur
+    #         all_gt_tags += all_gt_tags_cur
+    #         all_gt_tags_known += all_gt_tags_known_cur
+    #         all_gt_tags_unknown += all_gt_tags_unknown_cur
+    #         all_right_tag_list += all_right_tag_list_cur
+    #         all_right_tag_list_known += all_right_tag_list_known_cur
+    #         all_right_tag_list_unknown += all_right_tag_list_unknown_cur
+    #
+    #
+    #     print(f'precent of known words in corpus: {100 * len(all_right_tag_list_known)/len(all_right_tag_list)}')
+    #     print(f'precent of unknown words in corpus: {100 * len(all_right_tag_list_unknown) / len(all_right_tag_list)}')
+    #     if not is_comp:
+    #         self.total_acc = self._calc_acc(all_right_tag_list)
+    #         print(f'total accuracy: {self.total_acc}')
+    #         print(f'known words accuracy: {self._calc_acc(all_right_tag_list_known)}')
+    #         print(f'unknown words accuracy: {self._calc_acc(all_right_tag_list_unknown)}')
+    #         self.dump_res(all_tagged_res_list, all_gt_tags, all_res_tags, self.sentence_list)
+    #     self._dump_res_to_submission_file(file_name=self.file_name, tagged_sentence_list=all_tagged_res_list)
+    #     return all_res_tags, all_acc_list
+
     def predict_all_test(self, num_workers, is_comp):
-        """
-        main method that we use for prediction
-        :param num_workers: num of workers that calculate in parallel
-        :return:
-        """
-        p = mp.Pool(num_workers)
-        manager = mp.Manager()
-        q = manager.Queue()
-        args = self._prep_args(num_workers=num_workers, q=q)
-        p.starmap(func=self._calc_predict, iterable=args)
-        p.close()
-        p.join()
         print('starting inference')
         all_res_tags = []
         all_acc_list = []
-        all_tagged_res_list = []# will be saved to file
+        all_tagged_res_list = []  # will be saved to file
         all_gt_tags = []
         all_gt_tags_known = []
         all_gt_tags_unknown = []
@@ -130,44 +183,50 @@ class Viterbi:
         all_right_tag_list_known = []
         all_right_tag_list_unknown = []
 
-        res_list = []
-        while q.qsize() > 0:
-            res_list.append(q.get())
-        # sort to make sure that the results are in correct order
-        res_list = list(sorted(res_list, key=lambda x: x[0]))
+        for num, sentence in enumerate(self.sentence_list):
+            if num + 1 % 10 == 0:
+                print(f'handling sentence number {num + 1}')
+            cur_res = self.predict(sentence)
+            cur_res_known = [tag_res for hist, tag_res in zip(sentence, cur_res) if
+                             self.word_possible_tag_set.get(hist.cword, None)]
+            cur_res_unknown = [tag_res for hist, tag_res in zip(sentence, cur_res) if
+                               not self.word_possible_tag_set.get(hist.cword, None)]
+            all_res_tags.append(cur_res)
 
-        # update results from all processes
-        for _, all_res_tags_cur, \
-            all_acc_list_cur, \
-            all_tagged_res_list_cur, \
-            all_gt_tags_cur, \
-            all_gt_tags_known_cur, \
-            all_gt_tags_unknown_cur, \
-            all_right_tag_list_cur, \
-            all_right_tag_list_known_cur, \
-            all_right_tag_list_unknown_cur in res_list:
+            ground_truth = [hist.ctag for hist in sentence]
+            ground_truth_known = [hist.ctag for hist in sentence if self.word_possible_tag_set.get(hist.cword, None)]
+            ground_truth_unknown = [hist.ctag for hist in sentence if
+                                    not self.word_possible_tag_set.get(hist.cword, None)]
+            all_gt_tags.append(ground_truth)
+            all_gt_tags_known.append(ground_truth_known)
+            all_gt_tags_unknown.append(ground_truth_unknown)
+            res_acc, right_tag_list = self.calc_accuracy(cur_res, ground_truth)
+            res_acc_known, right_tag_list_known = self.calc_accuracy(cur_res_known, ground_truth_known)
+            res_acc_unknown, right_tag_list_unknown = self.calc_accuracy(cur_res_unknown, ground_truth_unknown)
 
+            print(f'accuracy for sentence {num + 1}: {res_acc}')
+            print(f'known words accuracy for sentence {num + 1}: {res_acc_known}')
+            print(f'unknown words accuracy for sentence {num + 1}: {res_acc_unknown}')
+            all_acc_list.append(res_acc)
+            all_right_tag_list += right_tag_list
+            all_right_tag_list_known += right_tag_list_known
+            all_right_tag_list_unknown += right_tag_list_unknown
+            cur_tagged_res = []
+            for hist, tag in zip(sentence, cur_res):
+                cword = hist.cword
+                cur_tagged_res.append(cword + '_' + tag)
+            all_tagged_res_list.append(cur_tagged_res)
 
-            all_res_tags += all_res_tags_cur
-            all_acc_list += all_acc_list_cur
-            all_tagged_res_list += all_tagged_res_list_cur
-            all_gt_tags += all_gt_tags_cur
-            all_gt_tags_known += all_gt_tags_known_cur
-            all_gt_tags_unknown += all_gt_tags_unknown_cur
-            all_right_tag_list += all_right_tag_list_cur
-            all_right_tag_list_known += all_right_tag_list_known_cur
-            all_right_tag_list_unknown += all_right_tag_list_unknown_cur
-
-
-        print(f'precent of known words in corpus: {100 * len(all_right_tag_list_known)/len(all_right_tag_list)}')
+            assert (len(cur_res) == len(sentence)), f'cur res: {cur_res}, sentence: {sentence}'
+        # print(all_tagged_res_list)
+        # print(f'total accuracy: {sum(all_acc_list)/len(all_acc_list)}')
+        print(f'precent of known words in corpus: {100 * len(all_right_tag_list_known) / len(all_right_tag_list)}')
         print(f'precent of unknown words in corpus: {100 * len(all_right_tag_list_unknown) / len(all_right_tag_list)}')
-        if not is_comp:
-            self.total_acc = self._calc_acc(all_right_tag_list)
-            print(f'total accuracy: {self.total_acc}')
-            print(f'known words accuracy: {self._calc_acc(all_right_tag_list_known)}')
-            print(f'unknown words accuracy: {self._calc_acc(all_right_tag_list_unknown)}')
-            self.dump_res(all_tagged_res_list, all_gt_tags, all_res_tags, self.sentence_list)
-        self._dump_res_to_submission_file(file_name=self.file_name, tagged_sentence_list=all_tagged_res_list)
+        self.total_acc = self._calc_acc(all_right_tag_list)
+        print(f'total accuracy: {self.total_acc}')
+        print(f'known words accuracy: {self._calc_acc(all_right_tag_list_known)}')
+        print(f'unknown words accuracy: {self._calc_acc(all_right_tag_list_unknown)}')
+        self.dump_res(all_tagged_res_list, all_gt_tags, all_res_tags, self.sentence_list)
         return all_res_tags, all_acc_list
 
     @staticmethod
@@ -176,7 +235,6 @@ class Viterbi:
             for sentence in tagged_sentence_list:
                 sentence_with_end_line = ' '.join(sentence) + '\n'
                 f.write(sentence_with_end_line)
-
 
     @staticmethod
     def _calc_acc(binary_list):
@@ -214,9 +272,10 @@ class Viterbi:
                 n_hist = History(cword=cur_hist.cword, pptag=pptag, ptag=u,
                                  nword=cur_hist.nword, pword=cur_hist.pword, ctag=c_tag,
                                  nnword=cur_hist.nnword, ppword=cur_hist.ppword)
+
                 dot_prod = self.v.dot(self.get_feature_from_hist(n_hist))
                 dots.append(dot_prod)
-            exp_arr = np.exp(np.array(dots))
+            exp_arr = np.exp(np.array(dots) - max(dots))
             prob_arr = exp_arr / np.sum(exp_arr)
             prob_arr = np.append(np.append(prob_arr,0) ,0)
             cur_pi.append(prev_pi[self.tag_to_index[pptag]]*prob_arr)
@@ -229,8 +288,13 @@ class Viterbi:
             for u in beam_set:
                 prev_pi = self.pi_tables[k-1, :, self.tag_to_index[u]]
                 probs = self.calc_prob_for_hist(cur_hist, prev_pi, u)
+                # try:
+                np.max(probs, axis=0)
                 self.pi_tables[k, self.tag_to_index[u], :] = np.max(probs, axis=0)
                 self.bp_tables[k, self.tag_to_index[u], :] = np.argmax(probs, axis=0)
+                # except:
+                #     raise Exception(f'probs: {probs}')
+                    # print(f'probs: {probs}')
 
             beam_idxs = np.argsort(self.pi_tables[k, [self.tag_to_index[u] for u in beam_set], :].flatten())
             beam_idxs = np.flip(beam_idxs % self.pi_tables.shape[-1])
