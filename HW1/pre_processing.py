@@ -110,6 +110,7 @@ class FeatureStatistics:
 
     def fill_tags_set(self):
         tag_set = set()
+        tag_set = tag_set | {'.', '?', '!'}
         for sentence in self.history_sentence_list:
             for hist in sentence:
                 tag_set.add(hist.ctag)
