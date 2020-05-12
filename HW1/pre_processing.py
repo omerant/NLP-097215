@@ -9,6 +9,7 @@ from features import WordAndTagConstants
 from utils import History, UNKNOWN_WORD
 from scipy.sparse import csr_matrix
 import gc
+import multiprocessing as mp
 np.random.seed(0)
 
 
@@ -191,23 +192,24 @@ class FeatureStatistics:
 
         print(f'num_total_features: {sum(total_feature_count)}')
 
-    def fill_all_possible_tags_dict(self, hist_ft_dict_path, hist_dict_name):
-        print('filling all_possible_prev_tags_dict')
-        dict_folder = 'hist_feature_dict'
-        if not os.path.isdir(dict_folder):
-            os.mkdir(dict_folder)
+    def _prep_args(self, num_workers, q):
+        step_size = int(len(self.history_sentence_list) / num_workers)
+        # each argument tuple is (hist_sentence_list, q, self)
+        args_list = [(self.history_sentence_list[i * step_size: (i+1)*step_size], q, self) for i in range(num_workers)]
+        return args_list
 
-        cur_word_idx = 0
-        for idx_sentence, sentence in enumerate(self.history_sentence_list):
+    @staticmethod
+    def _calc_tags_dict(hist_sentence_list: [[History]], q: mp.Queue, self):
+        hist_to_feature_vec_dict = dict()
+        hist_to_all_tag_feature_matrix_dict = dict()
+        for idx_sentence, sentence in enumerate(hist_sentence_list):
             if idx_sentence % 500 == 0:
                 gc.collect()
                 print(f'filling sentence number {idx_sentence}')
             for hist in sentence:
                 tag_set = self.tags_set
                 cur_feature_vecs = []
-                cur_word_idx += 1
-                self.hist_to_feature_vec_dict[hist] = \
-                    csr_matrix(self.get_non_zero_feature_vec_indices_from_history(hist))
+                hist_to_feature_vec_dict[hist] = csr_matrix(self.get_non_zero_feature_vec_indices_from_history(hist))
                 for ctag in tag_set:
                     new_hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag,
                                        ctag=ctag, nword=hist.nword, pword=hist.pword,
@@ -215,17 +217,39 @@ class FeatureStatistics:
 
                     cur_feature_vecs.append(self.get_non_zero_feature_vec_indices_from_history(new_hist))
 
-
                 key_all_tag_hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag,
                                            ctag=None, nword=hist.nword, pword=hist.pword,
                                            nnword=hist.nnword, ppword=hist.ppword)
 
                 # fill dict that contains matrices with dim num_tagsXnum_features, it will be used to speed up operations
-                if self.hist_to_all_tag_feature_matrix_dict.get(key_all_tag_hist, None) is None:
+                if hist_to_all_tag_feature_matrix_dict.get(key_all_tag_hist, None) is None:
                     sparse_res = csr_matrix(cur_feature_vecs)
 
                     # sparse_mem = sparse_res.data.nbytes + sparse_res.indptr.nbytes + sparse_res.indices.nbytes
-                    self.hist_to_all_tag_feature_matrix_dict[key_all_tag_hist] = sparse_res
+                    hist_to_all_tag_feature_matrix_dict[key_all_tag_hist] = sparse_res
+
+        q.put((hist_to_all_tag_feature_matrix_dict, hist_to_feature_vec_dict))
+
+    def fill_all_possible_tags_dict(self, hist_ft_dict_path, hist_dict_name, num_workers=4):
+        print('filling all_possible_prev_tags_dict')
+        dict_folder = 'hist_feature_dict'
+        if not os.path.isdir(dict_folder):
+            os.mkdir(dict_folder)
+        p = mp.Pool(num_workers)
+        manager = mp.Manager()
+        q = manager.Queue()
+        args = self._prep_args(num_workers=num_workers, q=q)
+        p.starmap(func=self._calc_tags_dict, iterable=args)
+        p.close()
+        p.join()
+        # now q contains tuples of (hist_to_all_tag_feature_matrix_dict, hist_to_feature_vec_dict)
+        res_list = []
+        while q.qsize() > 0:
+            res_list.append(q.get())
+
+        for hist_all_tag_feature_mat_dict, hist_feature_vec_dict in res_list:
+            self.hist_to_feature_vec_dict.update(hist_feature_vec_dict)
+            self.hist_to_all_tag_feature_matrix_dict.update(hist_all_tag_feature_mat_dict)
 
         if not os.path.isdir(hist_ft_dict_path):
             os.makedirs(hist_ft_dict_path)
