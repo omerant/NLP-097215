@@ -9,7 +9,7 @@ np.random.seed(0)
 class Viterbi:
     def __init__(self, v, sentence_hist_list: [[History]], tags_list, all_possible_tags_dict,
                  get_feature_from_hist, word_possible_tag_set, word_possible_tag_with_threshold_dict,
-                 rare_words_tags, threshold, reg_lambda, beam_width=6):
+                 rare_words_tags, threshold, reg_lambda, file_name, beam_width=6):
         self.v = v
         self.sentence_list = sentence_hist_list
         tags_list.append('*')
@@ -30,6 +30,7 @@ class Viterbi:
         self.threshold = threshold
         self.reg_lambda = reg_lambda
         self.beam_width = beam_width
+        self.file_name = file_name
 
     def _prep_args(self, num_workers, q):
         step_size = int(len(self.sentence_list) / num_workers)
@@ -105,6 +106,11 @@ class Viterbi:
                all_right_tag_list_unknown))
 
     def predict_all_test(self, num_workers=4):
+        """
+        main method that we use for prediction
+        :param num_workers: num of workers that calculate in parallel
+        :return:
+        """
         p = mp.Pool(num_workers)
         manager = mp.Manager()
         q = manager.Queue()
@@ -159,8 +165,17 @@ class Viterbi:
         print(f'total accuracy: {self.total_acc}')
         print(f'known words accuracy: {self._calc_acc(all_right_tag_list_known)}')
         print(f'unknown words accuracy: {self._calc_acc(all_right_tag_list_unknown)}')
+        self._dump_res_to_file(file_name=self.file_name, tagged_sentence_list=all_tagged_res_list)
         self.dump_res(all_tagged_res_list, all_gt_tags, all_res_tags, self.sentence_list)
         return all_res_tags, all_acc_list
+
+    @staticmethod
+    def _dump_res_to_file(file_name, tagged_sentence_list):
+        with open(file_name, 'w') as f:
+            for sentence in tagged_sentence_list:
+                sentence_with_end_line = ' '.join(sentence) + '\n'
+                f.write(sentence_with_end_line)
+
 
     @staticmethod
     def _calc_acc(binary_list):

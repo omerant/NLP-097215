@@ -17,7 +17,7 @@ class FeatureStatistics:
     def __init__(self, input_file_path, threshold, config, rare_word_num_appearence_th=3):
         #TODO: try higher rare_word_num_appearence_th
         self.file_path = input_file_path
-        self.history_sentence_list = self.fill_ordered_history_list(self.file_path)
+        self.history_sentence_list = self.fill_tagged_ordered_history_list(self.file_path)
         self.num_sentences = len(self.history_sentence_list)
 
         # REPLACE RARE WORDS WITH UNK
@@ -51,7 +51,7 @@ class FeatureStatistics:
         pass
 
     @staticmethod
-    def fill_ordered_history_list(file_path, is_test=False):
+    def fill_tagged_ordered_history_list(file_path, is_test=False):
         with open(file_path) as f:
             hist_sentence_list = []
             for idx, line in enumerate(f):
@@ -90,6 +90,20 @@ class FeatureStatistics:
                         nnword = WordAndTagConstants.NNWORD_SENTENCE_END
                     cur_hist = History(cword=cword, pptag=pptag, ptag=ptag, ctag=ctag, nword=nword, pword=pword,
                                        ppword=ppword, nnword=nnword)
+                    new_sentence_hist_list.append(cur_hist)
+                hist_sentence_list.append(new_sentence_hist_list)
+        return hist_sentence_list
+
+    @staticmethod
+    def fill_comp_ordered_history_list(file_path):
+        with open(file_path) as f:
+            hist_sentence_list = []
+            for idx, line in enumerate(f):
+                splited_words = split(' |,\n', line[:-1]) if line[-1] == '\n' else split(' |,\n', line)
+                new_sentence_hist_list = []
+                for word in splited_words:
+                    cur_hist = History(cword=word, pptag=None, ptag=None, ctag=None, nword=None, pword=None,
+                                       ppword=None, nnword=None)
                     new_sentence_hist_list.append(cur_hist)
                 hist_sentence_list.append(new_sentence_hist_list)
         return hist_sentence_list
@@ -200,6 +214,13 @@ class FeatureStatistics:
 
     @staticmethod
     def _calc_hist_dicts(hist_sentence_list: [[History]], q: mp.Queue, self):
+        """ method that calculates  two dictionaries - hist_to_all_tag_feature_matrix_dict and hist_to_feature_vec_dict
+
+        :param hist_sentence_list: sentenc
+        :param q:
+        :param self:
+        :return:
+        """
         hist_to_feature_vec_dict = dict()
         hist_to_all_tag_feature_matrix_dict = dict()
         for idx_sentence, sentence in enumerate(hist_sentence_list):
@@ -231,6 +252,13 @@ class FeatureStatistics:
         q.put((hist_to_all_tag_feature_matrix_dict, hist_to_feature_vec_dict))
 
     def fill_all_possible_tags_dict(self, hist_ft_dict_path, hist_dict_name, num_workers=4):
+        """
+
+        :param hist_ft_dict_path:
+        :param hist_dict_name:
+        :param num_workers:
+        :return:
+        """
         print('filling all_possible_prev_tags_dict')
         dict_folder = 'hist_feature_dict'
         if not os.path.isdir(dict_folder):
