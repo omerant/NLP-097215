@@ -194,7 +194,10 @@ class Viterbi:
         return acc, right_tag_list
 
     def get_possible_tag_set_from_word(self, word):
-        tag_set = self.tags_list[:-2]
+        if self.word_possible_tag_with_threshold_dict.get(word, None):
+            tag_set = self.word_possible_tag_with_threshold_dict[word]
+        else:
+            tag_set = self.tags_list[:-2]
         return tag_set
 
     # @timeit
@@ -203,7 +206,7 @@ class Viterbi:
         cur_pi = []
         for pptag in range(pptag_len):
             if prev_pi[pptag] == 0:
-                cur_pi.append(np.zeros(len(self.tags_list),dtype=np.float64))
+                cur_pi.append(np.zeros(len(self.tags_list), dtype=np.float64))
                 continue
             pptag = self.index_to_tag[pptag]
             dots = []
@@ -215,7 +218,7 @@ class Viterbi:
                 dots.append(dot_prod)
             exp_arr = np.exp(np.array(dots))
             prob_arr = exp_arr / np.sum(exp_arr)
-            prob_arr = np.append(np.append(prob_arr,0),0)
+            prob_arr = np.append(np.append(prob_arr,0) ,0)
             cur_pi.append(prev_pi[self.tag_to_index[pptag]]*prob_arr)
         return np.array(cur_pi)
 
