@@ -104,7 +104,7 @@ class Viterbi:
                all_right_tag_list_known,
                all_right_tag_list_unknown))
 
-    def predict_all_test(self, num_workers=1):
+    def predict_all_test(self, num_workers=4):
         p = mp.Pool(num_workers)
         manager = mp.Manager()
         q = manager.Queue()
@@ -180,8 +180,6 @@ class Viterbi:
     def get_possible_tag_set_from_word(self, word):
         tag_set = self.tags_list[:-2]
         return tag_set
-
-    # def calc_tag_set_for_unknown(self, hist):
 
     # @timeit
     def calc_prob_for_hist(self, cur_hist, prev_pi, u):
