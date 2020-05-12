@@ -42,7 +42,8 @@ def predict(train_path, threshold, reg_lambda, test_path, conf, beam_width, file
                                                      reg_lambda=reg_lambda)
     ft_statistics = FeatureStatistics(input_file_path=train_path, threshold=threshold, config=conf)
     ft_statistics.pre_process(fill_possible_tag_dict=False)
-    if 'comp' in file_name:
+    is_comp = 'comp' in file_name
+    if is_comp:
         test_sentence_hist_list = FeatureStatistics.fill_comp_ordered_history_list(file_path=test_path)
     else:
         test_sentence_hist_list = FeatureStatistics.fill_tagged_ordered_history_list(file_path=test_path, is_test=True)
@@ -64,7 +65,7 @@ def predict(train_path, threshold, reg_lambda, test_path, conf, beam_width, file
         file_name=file_name,
         beam_width=beam_width
     )
-    viterbi.predict_all_test()
+    viterbi.predict_all_test(num_workers=4, is_comp=is_comp)
 
 
 # run examples:
@@ -76,6 +77,7 @@ def predict(train_path, threshold, reg_lambda, test_path, conf, beam_width, file
 # run all flow - train on train1 and test on comp1
 # python run_all.py --th 10 --tra data/train1.wtag --te data/comp1.words --reg-lambda 0.01 --run-all true --conf base --beam 6 --file comp_m1_311773915.wtag
 
+## part 2
 # run all flow - train on train2 and test on comp2
 # python run_all.py --th 10 --tra data/train2.wtag --te data/comp2.words --reg-lambda 0.01 --run-all true --conf base --beam 6 --file  comp_m2_201095510.wtag
 

@@ -105,7 +105,7 @@ class Viterbi:
                all_right_tag_list_known,
                all_right_tag_list_unknown))
 
-    def predict_all_test(self, num_workers=4):
+    def predict_all_test(self, num_workers, is_comp):
         """
         main method that we use for prediction
         :param num_workers: num of workers that calculate in parallel
@@ -161,16 +161,17 @@ class Viterbi:
 
         print(f'precent of known words in corpus: {100 * len(all_right_tag_list_known)/len(all_right_tag_list)}')
         print(f'precent of unknown words in corpus: {100 * len(all_right_tag_list_unknown) / len(all_right_tag_list)}')
-        self.total_acc = self._calc_acc(all_right_tag_list)
-        print(f'total accuracy: {self.total_acc}')
-        print(f'known words accuracy: {self._calc_acc(all_right_tag_list_known)}')
-        print(f'unknown words accuracy: {self._calc_acc(all_right_tag_list_unknown)}')
-        self._dump_res_to_file(file_name=self.file_name, tagged_sentence_list=all_tagged_res_list)
-        self.dump_res(all_tagged_res_list, all_gt_tags, all_res_tags, self.sentence_list)
+        if not is_comp:
+            self.total_acc = self._calc_acc(all_right_tag_list)
+            print(f'total accuracy: {self.total_acc}')
+            print(f'known words accuracy: {self._calc_acc(all_right_tag_list_known)}')
+            print(f'unknown words accuracy: {self._calc_acc(all_right_tag_list_unknown)}')
+            self.dump_res(all_tagged_res_list, all_gt_tags, all_res_tags, self.sentence_list)
+        self._dump_res_to_submission_file(file_name=self.file_name, tagged_sentence_list=all_tagged_res_list)
         return all_res_tags, all_acc_list
 
     @staticmethod
-    def _dump_res_to_file(file_name, tagged_sentence_list):
+    def _dump_res_to_submission_file(file_name, tagged_sentence_list):
         with open(file_name, 'w') as f:
             for sentence in tagged_sentence_list:
                 sentence_with_end_line = ' '.join(sentence) + '\n'
