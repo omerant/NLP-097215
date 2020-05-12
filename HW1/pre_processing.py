@@ -199,7 +199,7 @@ class FeatureStatistics:
         return args_list
 
     @staticmethod
-    def _calc_tags_dict(hist_sentence_list: [[History]], q: mp.Queue, self):
+    def _calc_hist_dicts(hist_sentence_list: [[History]], q: mp.Queue, self):
         hist_to_feature_vec_dict = dict()
         hist_to_all_tag_feature_matrix_dict = dict()
         for idx_sentence, sentence in enumerate(hist_sentence_list):
@@ -235,14 +235,15 @@ class FeatureStatistics:
         dict_folder = 'hist_feature_dict'
         if not os.path.isdir(dict_folder):
             os.mkdir(dict_folder)
+        # each hist subset is independent - calculate with num_workers
         p = mp.Pool(num_workers)
         manager = mp.Manager()
         q = manager.Queue()
         args = self._prep_args(num_workers=num_workers, q=q)
-        p.starmap(func=self._calc_tags_dict, iterable=args)
+        p.starmap(func=self._calc_hist_dicts, iterable=args)
         p.close()
         p.join()
-        # now q contains tuples of (hist_to_all_tag_feature_matrix_dict, hist_to_feature_vec_dict)
+        # now q contains tuples of (hist_to_feature_vec_dict, hist_to_all_tag_feature_matrix_dict)
         res_list = []
         while q.qsize() > 0:
             res_list.append(q.get())

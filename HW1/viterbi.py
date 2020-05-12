@@ -1,8 +1,8 @@
 import numpy as np
 import pickle
 import os
+import multiprocessing as mp
 from utils import History
-from utils import timeit, MIN_EXP_VAL, MIN_LOG_VAL, BASE_PROB, OpenClassTypes, UNKNOWN_WORD
 np.random.seed(0)
 
 
@@ -31,7 +31,87 @@ class Viterbi:
         self.reg_lambda = reg_lambda
         self.beam_width = beam_width
 
-    def predict_all_test(self):
+    def _prep_args(self, num_workers, q):
+        step_size = int(len(self.sentence_list) / num_workers)
+        # each argument tuple is (i, hist_sentence_list, q, self)
+        args_list = [(i, self.sentence_list[i * step_size: (i + 1) * step_size], q, self) for i in
+                     range(num_workers)]
+        return args_list
+
+    @staticmethod
+    def _calc_predict(i, sentence_list, q: mp.Queue, self):
+        """
+        method that executes viterbi on given sentence list
+        :param i: index that will be used to sort sentences after process finished
+        :param sentence_list: list of sentences to work on
+        :param q: queue in which we will save results
+        :param self: viterbi object
+        :return:
+        """
+        all_res_tags = []
+        all_acc_list = []
+        all_tagged_res_list = []# will be saved to file
+        all_gt_tags = []
+        all_gt_tags_known = []
+        all_gt_tags_unknown = []
+
+        all_right_tag_list = []
+        all_right_tag_list_known = []
+        all_right_tag_list_unknown = []
+
+        for num, sentence in enumerate(sentence_list):
+            if num + 1 % 10 == 0:
+                print(f'handling sentence number {num + 1}')
+            cur_res = self.predict(sentence)
+            cur_res_known = [tag_res for hist, tag_res in zip(sentence, cur_res) if
+                             self.word_possible_tag_set.get(hist.cword, None)]
+            cur_res_unknown = [tag_res for hist, tag_res in zip(sentence, cur_res) if
+                               not self.word_possible_tag_set.get(hist.cword, None)]
+            all_res_tags.append(cur_res)
+
+            ground_truth = [hist.ctag for hist in sentence]
+            ground_truth_known = [hist.ctag for hist in sentence if self.word_possible_tag_set.get(hist.cword, None)]
+            ground_truth_unknown = [hist.ctag for hist in sentence if
+                                    not self.word_possible_tag_set.get(hist.cword, None)]
+            all_gt_tags.append(ground_truth)
+            all_gt_tags_known.append(ground_truth_known)
+            all_gt_tags_unknown.append(ground_truth_unknown)
+            res_acc, right_tag_list = self.calc_accuracy(cur_res, ground_truth)
+            res_acc_known, right_tag_list_known = self.calc_accuracy(cur_res_known, ground_truth_known)
+            res_acc_unknown, right_tag_list_unknown = self.calc_accuracy(cur_res_unknown, ground_truth_unknown)
+            if num + 1 % 10 == 0:
+                print(f'accuracy for sentence {num + 1}: {res_acc} \n'
+                      f'known words accuracy for sentence {num + 1}: {res_acc_known}'
+                      f'unknown words accuracy for sentence {num + 1}: {res_acc_unknown}')
+
+            all_acc_list.append(res_acc)
+            all_right_tag_list += right_tag_list
+            all_right_tag_list_known += right_tag_list_known
+            all_right_tag_list_unknown += right_tag_list_unknown
+            cur_tagged_res = []
+            for hist, tag in zip(sentence, cur_res):
+                cword = hist.cword
+                cur_tagged_res.append(cword + '_' + tag)
+            all_tagged_res_list.append(cur_tagged_res)
+            assert (len(cur_res) == len(sentence)), f'cur res: {cur_res}, sentence: {sentence}'
+        q.put((i, all_res_tags,
+               all_acc_list,
+               all_tagged_res_list,
+               all_gt_tags,
+               all_gt_tags_known,
+               all_gt_tags_unknown,
+               all_right_tag_list,
+               all_right_tag_list_known,
+               all_right_tag_list_unknown))
+
+    def predict_all_test(self, num_workers=1):
+        p = mp.Pool(num_workers)
+        manager = mp.Manager()
+        q = manager.Queue()
+        args = self._prep_args(num_workers=num_workers, q=q)
+        p.starmap(func=self._calc_predict, iterable=args)
+        p.close()
+        p.join()
         print('starting inference')
         all_res_tags = []
         all_acc_list = []
@@ -44,40 +124,35 @@ class Viterbi:
         all_right_tag_list_known = []
         all_right_tag_list_unknown = []
 
-        for num, sentence in enumerate(self.sentence_list):
-            if num + 1 % 10 == 0:
-                print(f'handling sentence number {num+1}')
-            cur_res = self.predict(sentence)
-            cur_res_known = [tag_res for hist, tag_res in zip(sentence, cur_res) if self.word_possible_tag_set.get(hist.cword, None)]
-            cur_res_unknown = [tag_res for hist, tag_res in zip(sentence, cur_res) if not self.word_possible_tag_set.get(hist.cword, None)]
-            all_res_tags.append(cur_res)
+        res_list = []
+        while q.qsize() > 0:
+            res_list.append(q.get())
+        # sort to make sure that the results are in correct order
+        res_list = list(sorted(res_list, key=lambda x: x[0]))
 
-            ground_truth = [hist.ctag for hist in sentence]
-            ground_truth_known = [hist.ctag for hist in sentence if self.word_possible_tag_set.get(hist.cword, None)]
-            ground_truth_unknown = [hist.ctag for hist in sentence if not self.word_possible_tag_set.get(hist.cword, None)]
-            all_gt_tags.append(ground_truth)
-            all_gt_tags_known.append(ground_truth_known)
-            all_gt_tags_unknown.append(ground_truth_unknown)
-            res_acc, right_tag_list = self.calc_accuracy(cur_res, ground_truth)
-            res_acc_known, right_tag_list_known = self.calc_accuracy(cur_res_known, ground_truth_known)
-            res_acc_unknown, right_tag_list_unknown = self.calc_accuracy(cur_res_unknown, ground_truth_unknown)
+        # update results from all processes
+        for _, all_res_tags_cur, \
+            all_acc_list_cur, \
+            all_tagged_res_list_cur, \
+            all_gt_tags_cur, \
+            all_gt_tags_known_cur, \
+            all_gt_tags_unknown_cur, \
+            all_right_tag_list_cur, \
+            all_right_tag_list_known_cur, \
+            all_right_tag_list_unknown_cur in res_list:
 
-            print(f'accuracy for sentence {num+1}: {res_acc}')
-            print(f'known words accuracy for sentence {num + 1}: {res_acc_known}')
-            print(f'unknown words accuracy for sentence {num + 1}: {res_acc_unknown}')
-            all_acc_list.append(res_acc)
-            all_right_tag_list += right_tag_list
-            all_right_tag_list_known += right_tag_list_known
-            all_right_tag_list_unknown += right_tag_list_unknown
-            cur_tagged_res = []
-            for hist, tag in zip(sentence, cur_res):
-                cword = hist.cword
-                cur_tagged_res.append(cword + '_' + tag)
-            all_tagged_res_list.append(cur_tagged_res)
 
-            assert (len(cur_res) == len(sentence)), f'cur res: {cur_res}, sentence: {sentence}'
-        # print(all_tagged_res_list)
-        # print(f'total accuracy: {sum(all_acc_list)/len(all_acc_list)}')
+            all_res_tags += all_res_tags_cur
+            all_acc_list += all_acc_list_cur
+            all_tagged_res_list += all_tagged_res_list_cur
+            all_gt_tags += all_gt_tags_cur
+            all_gt_tags_known += all_gt_tags_known_cur
+            all_gt_tags_unknown += all_gt_tags_unknown_cur
+            all_right_tag_list += all_right_tag_list_cur
+            all_right_tag_list_known += all_right_tag_list_known_cur
+            all_right_tag_list_unknown += all_right_tag_list_unknown_cur
+
+
         print(f'precent of known words in corpus: {100 * len(all_right_tag_list_known)/len(all_right_tag_list)}')
         print(f'precent of unknown words in corpus: {100 * len(all_right_tag_list_unknown) / len(all_right_tag_list)}')
         self.total_acc = self._calc_acc(all_right_tag_list)
