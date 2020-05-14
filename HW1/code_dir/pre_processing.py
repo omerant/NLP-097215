@@ -6,7 +6,7 @@ from functools import partial
 import features as ft
 import numpy as np
 from features import WordAndTagConstants
-from utils import History, UNKNOWN_WORD
+from utils import History
 from scipy.sparse import csr_matrix
 import gc
 import multiprocessing as mp
@@ -110,7 +110,6 @@ class FeatureStatistics:
 
     def fill_tags_set(self):
         tag_set = set()
-        tag_set = tag_set | {'.', '?', '!'}
         for sentence in self.history_sentence_list:
             for hist in sentence:
                 tag_set.add(hist.ctag)

@@ -13,7 +13,7 @@ from re import split
 class ResultsHandler:
     def __init__(self):
         self.res_path = 'res'
-        self.dump_name = 'test1_10_0.1'
+        self.dump_name = 'test1_threshold_3_lambda_0.7_beam_2_acc_94.69026548672566'
         self.cf_name = 'cf'
 
     def get_res(self):
@@ -36,7 +36,7 @@ class ResultsHandler:
         print(acc)
         df_cm = pd.DataFrame(self.C, self.all_labels, self.all_labels)
         sn.set(font_scale=0.3)
-        hm = sn.heatmap(df_cm,annot=True,robust=True)
+        hm = sn.heatmap(df_cm,annot=True, robust=True)
         save_path = os.path.join(self.res_path, self.cf_name)
         cm = hm.get_figure()
         cm.savefig(save_path, dpi=400)
