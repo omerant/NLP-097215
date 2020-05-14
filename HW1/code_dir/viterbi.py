@@ -100,7 +100,7 @@ class Viterbi:
                 cword = hist.cword
                 cur_tagged_res.append(cword + '_' + tag)
             all_tagged_res_list.append(cur_tagged_res)
-            assert (len(cur_res) == len(sentence)), f'cur res: {cur_res}, sentence: {sentence}'
+            # assert (len(cur_res) == len(sentence)), f'cur res: {cur_res}, sentence: {sentence}'
         q.put((i, all_res_tags,
                all_acc_list,
                all_tagged_res_list,

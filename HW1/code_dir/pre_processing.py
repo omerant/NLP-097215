@@ -33,7 +33,7 @@ class FeatureStatistics:
         self.word_possible_tag_with_threshold_dict = self.fill_possible_tags_with_certainty_dict()
         # self.tag_possible_word_dict = self.fill_tag_possible_word_dict()
 
-        self.hist_to_feature_vec_dict = dict()
+        self.hist_to_feature_vec_dict = OrderedDict()
         self.hist_to_all_tag_feature_matrix_dict = dict()
         self.version = 1
         self.threshold = threshold
@@ -264,7 +264,8 @@ class FeatureStatistics:
         if not os.path.isdir(dict_folder):
             os.mkdir(dict_folder)
         # each hist subset is independent - calculate with num_workers
-        p = mp.Pool(num_workers)
+        # p = mp.Pool(num_workers)
+        p = mp.Pool(1)
         manager = mp.Manager()
         q = manager.Queue()
         args = self._prep_args(num_workers=num_workers, q=q)
@@ -273,6 +274,8 @@ class FeatureStatistics:
         p.join()
         # now q contains tuples of (hist_to_feature_vec_dict, hist_to_all_tag_feature_matrix_dict)
         res_list = []
+        # History(cword='In', pptag='**', ptag='*', ctag='FW', nword='vitro', pword='&&', nnword='transcription',
+        #         ppword='^^')
         while q.qsize() > 0:
             res_list.append(q.get())
 

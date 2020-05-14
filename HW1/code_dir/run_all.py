@@ -1,6 +1,6 @@
 import argparse
 from pre_processing import FeatureStatistics
-from model_new import MaximumEntropyMarkovModel
+from model import MaximumEntropyMarkovModel
 from viterbi import Viterbi
 from utils import timeit
 from config import BaseCfg, NoPrefSufCfg

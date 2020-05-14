@@ -13,7 +13,7 @@ from re import split
 class ResultsHandler:
     def __init__(self):
         self.res_path = 'res'
-        self.dump_name = 'test1_threshold_3_lambda_0.7_beam_2_acc_94.69026548672566'
+        self.dump_name = 'test1_threshold_3_lambda_0.7_beam_2_acc_95.5267381937991'
         self.cf_name = 'cf'
 
     def get_res(self):
@@ -67,6 +67,7 @@ class ResultsHandler:
         print(common_words_mistakes)
         print('Num of mistakes per word:')
         print(most_mistakes_num)
+
     def acc_per_label(self):
         accs = {self.idx_to_labels[i]: (row[i] / np.sum(row)) if np.sum(row)>0 else 0 for i,row in enumerate(self.C)}
         print("% acc per real label: ", accs)
