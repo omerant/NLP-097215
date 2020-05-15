@@ -209,7 +209,13 @@ class FeatureStatistics:
     def _prep_args(self, num_workers, q):
         step_size = int(len(self.history_sentence_list) / num_workers)
         # each argument tuple is (hist_sentence_list, q, self)
-        args_list = [(self.history_sentence_list[i * step_size: (i+1)*step_size], q, self) for i in range(num_workers)]
+        args_list = []
+        for i in range(num_workers):
+            if i < num_workers - 1:
+                args_list.append((self.history_sentence_list[i * step_size: (i+1)*step_size], q, self))
+            else:
+                args_list.append((self.history_sentence_list[i * step_size:], q, self))
+        # args_list = [(self.history_sentence_list[i * step_size: (i+1)*step_size], q, self) for i in range(num_workers)]
         return args_list
 
     @staticmethod
@@ -264,8 +270,8 @@ class FeatureStatistics:
         if not os.path.isdir(dict_folder):
             os.mkdir(dict_folder)
         # each hist subset is independent - calculate with num_workers
-        # p = mp.Pool(num_workers)
-        p = mp.Pool(1)
+        p = mp.Pool(num_workers)
+        # p = mp.Pool(1)
         manager = mp.Manager()
         q = manager.Queue()
         args = self._prep_args(num_workers=num_workers, q=q)
