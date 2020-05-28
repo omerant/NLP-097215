@@ -1,6 +1,6 @@
 import argparse
 from pre_processing import FeatureStatistics
-from model_new import MaximumEntropyMarkovModel
+from model import MaximumEntropyMarkovModel
 from viterbi import Viterbi
 from utils import timeit
 from config import BaseCfg, NoPrefSufCfg
@@ -13,7 +13,9 @@ parser.add_argument("--train-path", help="path to training data", type=str, requ
 parser.add_argument("--test-path", help="path to test data", type=str, required=True)
 parser.add_argument("--reg-lambda", help="regularization lambda", type=float, required=True)
 parser.add_argument("--config", help="regularization lambda", choices=['base', 'nps', 'comp1', 'comp2'], required=True)
-
+parser.add_argument("--file", help="regularization lambda", choices=['comp_m1_311773915.wtag', 'comp_m2_201095510.wtag',
+                                                                     'test1_our.wtag'], required=True)
+parser.add_argument("--beam", help="beam width", type=int, required=True)
 parser.add_argument("--run-all", help="run pre_process + train + predict", type=bool, default=False)
 parser.add_argument("--pp", help="run only pre_process", type=bool, required=False, default=False)
 parser.add_argument("--tr", help="run only train", type=bool, required=False, default=False)
@@ -35,44 +37,53 @@ def train(train_path, threshold, reg_lambda, conf):
 
 
 @timeit
-def predict(train_path, threshold, reg_lambda, test_path, conf):
+def predict(train_path, threshold, reg_lambda, test_path, conf, beam_width, file_name):
     v = MaximumEntropyMarkovModel.load_v_from_pickle(dump_weights_path='weights', threshold=args.threshold,
                                                      reg_lambda=reg_lambda)
     ft_statistics = FeatureStatistics(input_file_path=train_path, threshold=threshold, config=conf)
     ft_statistics.pre_process(fill_possible_tag_dict=False)
-    test_sentence_hist_list = FeatureStatistics.fill_ordered_history_list(file_path=test_path, is_test=True)
+    is_comp = 'comp' in file_name
+    if is_comp:
+        test_sentence_hist_list = FeatureStatistics.fill_comp_ordered_history_list(file_path=test_path)
+    else:
+        test_sentence_hist_list = FeatureStatistics.fill_tagged_ordered_history_list(file_path=test_path, is_test=True)
     tag_set = ft_statistics.tags_set
-    all_possible_tags_dict = ft_statistics.all_possible_tags_dict
-    get_ft_from_hist_func = ft_statistics.get_non_zero_sparse_feature_vec_indices_from_history
+    all_possible_tags_dict = ft_statistics.hist_to_feature_vec_dict
+    get_ft_from_hist_func = ft_statistics.get_non_zero_feature_vec_indices_from_history
     word_possible_tag_set = ft_statistics.word_possible_tag_set
     word_possible_tag_with_threshold_dict = ft_statistics.word_possible_tag_with_threshold_dict
     rare_words_tags = ft_statistics.rare_words_tags
-    _, prob_dict, exp_dict = MaximumEntropyMarkovModel.calc_normalization_term_exp_dict_prob_dict(
-        v=v, all_possible_hist_feature_dict=all_possible_tags_dict,
-        sentence_history_list=ft_statistics.history_sentence_list, word_to_tags_set_dict=word_possible_tag_set,
-        word_to_most_probable_tag_set=word_possible_tag_with_threshold_dict
-    )
 
     viterbi = Viterbi(
-        v=v, sentence_hist_list=test_sentence_hist_list, tags_set=tag_set,
+        v=v, sentence_hist_list=test_sentence_hist_list, tags_list=tag_set,
         all_possible_tags_dict=all_possible_tags_dict, get_feature_from_hist=get_ft_from_hist_func,
         word_possible_tag_set=word_possible_tag_set,
         word_possible_tag_with_threshold_dict=word_possible_tag_with_threshold_dict,
         rare_words_tags=rare_words_tags,
-        prob_dict=prob_dict,
-        exp_dict=exp_dict,
         threshold=args.threshold,
-        reg_lambda=args.reg_lambda
+        reg_lambda=args.reg_lambda,
+        file_name=file_name,
+        beam_width=beam_width
     )
-    viterbi.predict_all_test()
+    viterbi.predict_all_test(num_workers=4, is_comp=is_comp)
 
 
-def run_all(train_path, threshold, reg_lambda, test_path):
-    pre_process(train_path=train_path, threshold=threshold)
-    train(train_path=train_path, threshold=threshold, reg_lambda=reg_lambda)
-    predict(train_path=train_path, threshold=threshold, reg_lambda=reg_lambda, test_path=test_path)
-# run example:
-# python run_all.py --th 10 --tra data/train1.wtag --te data/test1.wtag --reg-lambda 0.01 --run-all true --conf base
+# run examples:
+
+## part 1
+# run all flow - train on train1 and test on test1
+# python run_all.py --th 10 --tra data/train1.wtag --te data/test1.wtag --reg-lambda 0.01 --run-all true --conf base --beam 6 --file test1_our.wtag
+
+# run all flow - train on train1 and test on comp1
+# python run_all.py --th 10 --tra data/train1.wtag --te data/comp1.words --reg-lambda 0.01 --run-all true --conf base --beam 6 --file comp_m1_311773915.wtag
+
+## part 2
+# run all flow - train on train2 and test on comp2
+# python run_all.py --th 10 --tra data/train2.wtag --te data/comp2.words --reg-lambda 0.01 --run-all true --conf base --beam 6 --file  comp_m2_201095510.wtag
+
+
+
+
 # pre_process  only
 # python run_all.py --th 10 --tra data/train1.wtag --te data/test1_short.wtag --reg-lambda 0.01 --pp true --conf base
 # train only
@@ -93,7 +104,7 @@ if __name__ == '__main__':
         pre_process(train_path=args.train_path, threshold=args.threshold, config=config)
         train(train_path=args.train_path, threshold=args.threshold, reg_lambda=args.reg_lambda, conf=config)
         predict(train_path=args.train_path, threshold=args.threshold, reg_lambda=args.reg_lambda,
-                test_path=args.test_path, conf=config)
+                test_path=args.test_path, conf=config, beam_width=args.beam, file_name=args.file)
     elif args.pp:
         print('RUNNING ONLY PRE PROCESS')
         pre_process(train_path=args.train_path, threshold=args.threshold, config=config)
@@ -103,4 +114,4 @@ if __name__ == '__main__':
     elif args.pr:
         print('RUNNING ONLY PREDICT')
         predict(train_path=args.train_path, threshold=args.threshold, reg_lambda=args.reg_lambda,
-                test_path=args.test_path, conf=config)
+                test_path=args.test_path, conf=config, beam_width=args.beam, file_name=args.file)

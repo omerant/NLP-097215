@@ -12,8 +12,8 @@ from re import split
 
 class ResultsHandler:
     def __init__(self):
-        self.res_path = 'res'
-        self.dump_name = 'known_all_features/test1_10_10.0'
+        self.res_path = '../res'
+        self.dump_name = 'test1_threshold_3_lambda_0.7_beam_2_acc_95.5267381937991'
         self.cf_name = 'cf'
 
     def get_res(self):
@@ -25,8 +25,9 @@ class ResultsHandler:
     def process_results(self):
         self.y_true = [label for sentence in self.all_gt_tags for label in sentence]
         self.y_pred = [label for sentence in self.all_res_tags for label in sentence]
-        self.all_labels = list(dict.fromkeys(self.y_pred))
+        self.all_labels = list(dict.fromkeys(self.y_true))
         self.idx_to_labels = {idx: label for idx,label in enumerate(self.all_labels)}
+        self.label_to_idx = {label: idx for idx, label in self.idx_to_labels.items()}
         self.words = [wordtag.split('_')[0] for sentence in self.all_tagged_res_list for wordtag in sentence]
         self.true_tags = []
 
@@ -36,7 +37,7 @@ class ResultsHandler:
         print(acc)
         df_cm = pd.DataFrame(self.C, self.all_labels, self.all_labels)
         sn.set(font_scale=0.3)
-        hm = sn.heatmap(df_cm,annot=True,robust=True)
+        hm = sn.heatmap(df_cm,annot=True, robust=True)
         save_path = os.path.join(self.res_path, self.cf_name)
         cm = hm.get_figure()
         cm.savefig(save_path, dpi=400)
@@ -67,6 +68,7 @@ class ResultsHandler:
         print(common_words_mistakes)
         print('Num of mistakes per word:')
         print(most_mistakes_num)
+
     def acc_per_label(self):
         accs = {self.idx_to_labels[i]: (row[i] / np.sum(row)) if np.sum(row)>0 else 0 for i,row in enumerate(self.C)}
         print("% acc per real label: ", accs)
@@ -97,11 +99,27 @@ class ResultsHandler:
         new_words=[word for word in all_test_words if word not in all_train_words]
         print(len(new_words))
 
+    def create_conf_mat(self):
+        conf = np.zeros((len(self.all_labels), len(self.all_labels)))
+        for pred, true in zip(self.y_pred, self.y_true):
+            conf[self.label_to_idx[true], self.label_to_idx[pred]] +=1
+        conf_tmp = np.copy(conf)
+        conf_tmp[np.diag_indices_from(conf_tmp)] = 0
+        top_ten_mistakes = np.argsort(-conf_tmp.sum(axis=1))[:10]
+        top_ten_mistakes_labels = [self.idx_to_labels[idx] for idx in top_ten_mistakes]
+        conf_tmp = conf[top_ten_mistakes][:,top_ten_mistakes]
+        fig, axs = plt.subplots(2, 1)
+        axs[0].axis('tight')
+        axs[0].axis('off')
+        axs[0].table(conf_tmp, rowLabels=top_ten_mistakes_labels, colLabels=top_ten_mistakes_labels, loc='center')
+        plt.show()
+
 
 #
 res = ResultsHandler()
 # res.new_words()
 res.get_res()
+res.create_conf_mat()
 # res.plot_confusion_matrix()
-res.get_most_mistakes()
+# res.get_most_mistakes()
 # res.acc_per_label()

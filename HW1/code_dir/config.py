@@ -9,16 +9,16 @@ class BaseCfg(Cfg):
     feature_dicts = {
         # Init all features dictionaries - each feature dict's name should start with fd
         # fill dict for 1-3 ngrams
-        ft.TrigramTagsCountDict,
-        ft.BigramTagsCountDict,
-        ft.UnigramTagsCountDict,
-        ft.WordsTagsCountDict,
-        ft.WordsPrefixTagsCountDict,
-        ft.WordsSuffixTagsCountDict,
-        ft.PrevWordCurrTagCountDict,
-        ft.NextWordCurrTagCountDict,
-        ft.DoublePrevWordCurrTagCountDict,
-        ft.DoubleNextWordCurrTagCountDict,
+        ft.TrigramTagsCountDict, #v
+        ft.BigramTagsCountDict, #v
+        ft.UnigramTagsCountDict, #v
+        ft.WordsTagsCountDict, #v
+        ft.WordsPrefixTagsCountDict, #v
+        ft.WordsSuffixTagsCountDict,#v
+        ft.PrevWordCurrTagCountDict, #v
+        ft.NextWordCurrTagCountDict, #v
+        # ft.DoublePrevWordCurrTagCountDict,
+        # ft.DoubleNextWordCurrTagCountDict,
         ft.SkipBigramCountDict,
         # letters digits
         ft.HasFirstCapitalLetterDict,
@@ -27,10 +27,10 @@ class BaseCfg(Cfg):
         ft.HasOnlyDigitDict,
         ft.ContainsHyphenDict,
         ft.IsFirstWordDict,
-        ft.ContainsSymbolDict,
-        ft.ContainsOnlySymbolsDict,
-        ft.TwoPreviousTagsAndCurrentWord,
-        ft.NextWordCommasDict
+        # ft.ContainsSymbolDict,
+        # ft.ContainsOnlySymbolsDict,
+        # ft.TwoPreviousTagsAndCurrentWord,
+        # ft.NextWordCommasDict
     }
 
 

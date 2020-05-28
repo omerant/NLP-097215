@@ -6,7 +6,10 @@ from functools import partial
 import features as ft
 import numpy as np
 from features import WordAndTagConstants
-from utils import History, UNKNOWN_WORD
+from utils import History
+from scipy.sparse import csr_matrix
+import gc
+import multiprocessing as mp
 np.random.seed(0)
 
 
@@ -14,7 +17,7 @@ class FeatureStatistics:
     def __init__(self, input_file_path, threshold, config, rare_word_num_appearence_th=3):
         #TODO: try higher rare_word_num_appearence_th
         self.file_path = input_file_path
-        self.history_sentence_list = self.fill_ordered_history_list(self.file_path)
+        self.history_sentence_list = self.fill_tagged_ordered_history_list(self.file_path)
         self.num_sentences = len(self.history_sentence_list)
 
         # REPLACE RARE WORDS WITH UNK
@@ -30,7 +33,8 @@ class FeatureStatistics:
         self.word_possible_tag_with_threshold_dict = self.fill_possible_tags_with_certainty_dict()
         # self.tag_possible_word_dict = self.fill_tag_possible_word_dict()
 
-        self.all_possible_tags_dict = dict()
+        self.hist_to_feature_vec_dict = OrderedDict()
+        self.hist_to_all_tag_feature_matrix_dict = dict()
         self.version = 1
         self.threshold = threshold
         self.num_features = 0
@@ -47,7 +51,7 @@ class FeatureStatistics:
         pass
 
     @staticmethod
-    def fill_ordered_history_list(file_path, is_test=False):
+    def fill_tagged_ordered_history_list(file_path, is_test=False):
         with open(file_path) as f:
             hist_sentence_list = []
             for idx, line in enumerate(f):
@@ -90,12 +94,26 @@ class FeatureStatistics:
                 hist_sentence_list.append(new_sentence_hist_list)
         return hist_sentence_list
 
+    @staticmethod
+    def fill_comp_ordered_history_list(file_path):
+        with open(file_path) as f:
+            hist_sentence_list = []
+            for idx, line in enumerate(f):
+                splited_words = split(' |,\n', line[:-1]) if line[-1] == '\n' else split(' |,\n', line)
+                new_sentence_hist_list = []
+                for word in splited_words:
+                    cur_hist = History(cword=word, pptag=None, ptag=None, ctag=None, nword=None, pword=None,
+                                       ppword=None, nnword=None)
+                    new_sentence_hist_list.append(cur_hist)
+                hist_sentence_list.append(new_sentence_hist_list)
+        return hist_sentence_list
+
     def fill_tags_set(self):
         tag_set = set()
         for sentence in self.history_sentence_list:
             for hist in sentence:
                 tag_set.add(hist.ctag)
-        return tag_set
+        return list(tag_set)
 
     def fill_word_possible_tag_dict(self):
         possible_tags_dict = defaultdict(OrderedDict)
@@ -176,37 +194,6 @@ class FeatureStatistics:
             rare_words_tags.update(self.word_possible_tag_dict[word].keys())
         return rare_words_tags
 
-    def replace_rare_word_with_unk_in_hist(self):
-        hist_sentence_list_rare = []
-        for idx, sentence in enumerate(self.history_sentence_list):
-            sentence_hist_list = []
-            for hist in sentence:
-                new_hist = hist
-                # REPLACE ALL RARE WORDS IN HISTORY WITH UNKNOWN
-                if hist.cword in self.rare_word_set:
-                    new_hist = History(cword=UNKNOWN_WORD, pptag=hist.pptag, ptag=hist.ptag, ctag=hist.ctag,
-                                       nword=hist.nword, pword=hist.pword, ppword=hist.ppword, nnword=hist.nnword)
-
-                if hist.pword in self.rare_word_set:
-                    new_hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag, ctag=hist.ctag,
-                                       nword=hist.nword, pword=UNKNOWN_WORD, ppword=hist.ppword, nnword=hist.nnword)
-
-                if hist.nword in self.rare_word_set:
-                    new_hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag, ctag=hist.ctag,
-                                       nword=UNKNOWN_WORD, pword=hist.pword, ppword=hist.ppword, nnword=hist.nnword)
-
-                if hist.ppword in self.rare_word_set:
-                    new_hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag, ctag=hist.ctag,
-                                       nword=hist.nword, pword=hist.pword, ppword=UNKNOWN_WORD, nnword=hist.nnword)
-
-                if hist.nnword in self.rare_word_set:
-                    new_hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag, ctag=hist.ctag,
-                                       nword=hist.nword, pword=hist.pword, ppword=hist.ppword, nnword=UNKNOWN_WORD)
-                sentence_hist_list.append(new_hist)
-            hist_sentence_list_rare.append(sentence_hist_list)
-
-        self.history_sentence_list = hist_sentence_list_rare
-
     def print_num_features(self):
         print('\n\n\n')
         total_feature_count = []
@@ -219,37 +206,103 @@ class FeatureStatistics:
 
         print(f'num_total_features: {sum(total_feature_count)}')
 
-    def fill_all_possible_tags_dict(self, hist_ft_dict_path, hist_dict_name):
-        print('filling all_possible_prev_tags_dict')
-        dict_folder = 'hist_feature_dict'
-        if not os.path.isdir(dict_folder):
-            os.mkdir(dict_folder)
+    def _prep_args(self, num_workers, q):
+        step_size = int(len(self.history_sentence_list) / num_workers)
+        # each argument tuple is (hist_sentence_list, q, self)
+        args_list = []
+        for i in range(num_workers):
+            if i < num_workers - 1:
+                args_list.append((self.history_sentence_list[i * step_size: (i+1)*step_size], q, self))
+            else:
+                args_list.append((self.history_sentence_list[i * step_size:], q, self))
+        # args_list = [(self.history_sentence_list[i * step_size: (i+1)*step_size], q, self) for i in range(num_workers)]
+        return args_list
 
-        for idx, sentence in enumerate(self.history_sentence_list):
-            if idx % 500 == 0:
-                print(f'filling sentence number {idx}')
+    @staticmethod
+    def _calc_hist_dicts(hist_sentence_list: [[History]], q: mp.Queue, self):
+        """ method that calculates  two dictionaries - hist_to_all_tag_feature_matrix_dict and hist_to_feature_vec_dict
+
+        :param hist_sentence_list: sentenc
+        :param q:
+        :param self:
+        :return:
+        """
+        hist_to_feature_vec_dict = dict()
+        hist_to_all_tag_feature_matrix_dict = dict()
+        for idx_sentence, sentence in enumerate(hist_sentence_list):
+            if idx_sentence % 500 == 0:
+                gc.collect()
+                print(f'filling sentence number {idx_sentence}')
             for hist in sentence:
-                tag_set = self.word_possible_tag_set[hist.cword]
+                tag_set = self.tags_set
+                cur_feature_vecs = []
+                hist_to_feature_vec_dict[hist] = csr_matrix(self.get_non_zero_feature_vec_indices_from_history(hist))
                 for ctag in tag_set:
                     new_hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag,
                                        ctag=ctag, nword=hist.nword, pword=hist.pword,
                                        nnword=hist.nnword, ppword=hist.ppword)
-                    if not self.all_possible_tags_dict.get(new_hist, None):
-                        self.all_possible_tags_dict[new_hist] = self.get_non_zero_sparse_feature_vec_indices_from_history(new_hist)
+
+                    cur_feature_vecs.append(self.get_non_zero_feature_vec_indices_from_history(new_hist))
+
+                key_all_tag_hist = History(cword=hist.cword, pptag=hist.pptag, ptag=hist.ptag,
+                                           ctag=None, nword=hist.nword, pword=hist.pword,
+                                           nnword=hist.nnword, ppword=hist.ppword)
+
+                # fill dict that contains matrices with dim num_tagsXnum_features, it will be used to speed up operations
+                if hist_to_all_tag_feature_matrix_dict.get(key_all_tag_hist, None) is None:
+                    sparse_res = csr_matrix(cur_feature_vecs)
+
+                    # sparse_mem = sparse_res.data.nbytes + sparse_res.indptr.nbytes + sparse_res.indices.nbytes
+                    hist_to_all_tag_feature_matrix_dict[key_all_tag_hist] = sparse_res
+
+        q.put((hist_to_all_tag_feature_matrix_dict, hist_to_feature_vec_dict))
+
+    def fill_all_possible_tags_dict(self, hist_ft_dict_path, hist_dict_name, num_workers=4):
+        """
+
+        :param hist_ft_dict_path:
+        :param hist_dict_name:
+        :param num_workers:
+        :return:
+        """
+        print('filling all_possible_prev_tags_dict')
+        dict_folder = 'hist_feature_dict'
+        if not os.path.isdir(dict_folder):
+            os.mkdir(dict_folder)
+        # each hist subset is independent - calculate with num_workers
+        p = mp.Pool(num_workers)
+        # p = mp.Pool(1)
+        manager = mp.Manager()
+        q = manager.Queue()
+        args = self._prep_args(num_workers=num_workers, q=q)
+        p.starmap(func=self._calc_hist_dicts, iterable=args)
+        p.close()
+        p.join()
+        # now q contains tuples of (hist_to_feature_vec_dict, hist_to_all_tag_feature_matrix_dict)
+        res_list = []
+        # History(cword='In', pptag='**', ptag='*', ctag='FW', nword='vitro', pword='&&', nnword='transcription',
+        #         ppword='^^')
+        while q.qsize() > 0:
+            res_list.append(q.get())
+
+        for hist_all_tag_feature_mat_dict, hist_feature_vec_dict in res_list:
+            self.hist_to_feature_vec_dict.update(hist_feature_vec_dict)
+            self.hist_to_all_tag_feature_matrix_dict.update(hist_all_tag_feature_mat_dict)
+
         if not os.path.isdir(hist_ft_dict_path):
             os.makedirs(hist_ft_dict_path)
         full_path = os.path.join(hist_ft_dict_path, hist_dict_name)
         with open(full_path, "wb") as f:
             p = pickle.Pickler(f)
             p.fast = True
-            p.dump(self.all_possible_tags_dict)
+            p.dump((self.hist_to_feature_vec_dict, self.hist_to_all_tag_feature_matrix_dict))
 
-        print(f'total keys in all possible tags dict: {len(self.all_possible_tags_dict.keys())}')
+        print(f'total keys in all possible tags dict: {len(self.hist_to_feature_vec_dict.keys())}')
 
     def load_all_possible_tags_dict(self, path):
         print('loading all_possible_prev_tags_dict')
         with open(path, 'rb') as f:
-            self.all_possible_tags_dict = pickle.load(f)
+            self.hist_to_feature_vec_dict, self.hist_to_all_tag_feature_matrix_dict = pickle.load(f)
         print('finished loading all_possible_prev_tags_dict')
 
     def fill_num_features(self):
@@ -279,7 +332,7 @@ class FeatureStatistics:
             if fd_name != 'fd_word_tag':
                 fd.dict = filter_dict(fd.dict)
 
-    def get_non_zero_sparse_feature_vec_indices_from_history(self, history: ft.History):
+    def get_non_zero_feature_vec_indices_from_history(self, history: ft.History):
         sparse_feature_vec = OrderedDict()
         feature_dicts = sorted([attr for attr in dir(self) if attr.startswith('fd')])
         start_idx = 0
@@ -297,8 +350,7 @@ class FeatureStatistics:
         for k, v in sparse_feature_vec.items():
             feature_vec[k] = v
 
-        non_zero_indices = np.nonzero(feature_vec)
-        return non_zero_indices
+        return feature_vec
 
     def pre_process(self, fill_possible_tag_dict: bool = True):
         self.fill_feature_dicts()
