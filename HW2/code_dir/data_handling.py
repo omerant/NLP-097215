@@ -114,3 +114,4 @@ class PosDataset(Dataset):
         return {i: sample_tuple for i, sample_tuple in enumerate(zip(sentence_word_idx_list,
                                                                      sentence_pos_idx_list,
                                                                      sentence_len_list))}
+

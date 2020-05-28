@@ -69,6 +69,8 @@ class Trainer:
                 state = {
                     'net': self.model.state_dict(),
                     'epoch': epoch,
+                    'val_acc_list': val_acc_list,
+                    'train_acc_list': train_acc_list
                 }
                 print('saving model')
                 torch.save(state, 'checkpoints/' + self.model.name +  '.pth')
