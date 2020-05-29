@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 
 class DnnPosTagger(nn.Module):
-    def __init__(self, word_embeddings, hidden_dim, word_vocab_size, tag_vocab_size):
+    def __init__(self, word_embeddings, hidden_dim, num_layers, word_vocab_size, tag_vocab_size):
         """
         :param word_embeddings: word vectors from dataset, shape: (vocab_size, emb_dim)
         :param hidden_dim: number of hidden dims in LSTM
