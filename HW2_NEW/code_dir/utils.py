@@ -40,13 +40,8 @@ def get_vocabs_dep_parser(list_of_paths):
                 if line == '\n':
                     continue
                 splited_words = split(line, (' ', '\n', '\t'))
-                # del splited_words[-1]
                 word_dict[splited_words[WORD_IDX]] += 1
                 pos_dict[splited_words[POS_IDX]] += 1
-                # for word_and_tag in splited_words:
-                #     word, pos_tag = split(word_and_tag, '_')
-                #     word_dict[word] += 1
-                #     pos_dict[pos_tag] += 1
 
     return word_dict, pos_dict
 
