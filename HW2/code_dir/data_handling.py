@@ -1,15 +1,18 @@
 from collections import defaultdict
 import torch
-from utils import split
+from utils import split, get_vocabs, WORD_IDX, POS_IDX
 from torchtext.vocab import Vocab
 from torch.utils.data.dataset import Dataset, TensorDataset
+from torch.utils.data.dataloader import DataLoader
 from pathlib import Path
 from collections import Counter
 from constants import PAD_TOKEN, SPECIAL_TOKENS, UNKNOWN_TOKEN
 import os.path as osp
 
+WORD_EMBED_SIZE = 100
+POS_EMBED_SIZE = 25
 
-class PosDataReader:
+class DepDataReader:
     def __init__(self, file, word_dict, pos_dict):
         self.file = file
         self.word_dict = word_dict
@@ -20,27 +23,27 @@ class PosDataReader:
     def __readData__(self):
         """main reader function which also populates the class data structures"""
         with open(self.file, 'r') as f:
+            cur_sentence=[]
             for line in f:
-                cur_sentence = []
-                splited_words = split(line, (' ', '\n'))
-                del splited_words[-1]
-                for word_and_tag in splited_words:
-                    cur_word, cur_tag = split(word_and_tag, '_')
-                    cur_sentence.append((cur_word, cur_tag))
-                self.sentences.append(cur_sentence)
+                if line == '\n':
+                    self.sentences.append(cur_sentence)
+                    cur_sentence=[]
+                    continue
+                splited_words = split(line, (' ', '\n', '\t'))
+                cur_sentence.append((splited_words[WORD_IDX],splited_words[POS_IDX]))
 
     def get_num_sentences(self):
         """returns num of sentences in data"""
         return len(self.sentences)
 
 
-class PosDataset(Dataset):
+class DepDataset(Dataset):
     def __init__(self, word_dict, pos_dict, dir_path: str, subset: str,
                  padding=False, word_embeddings=None):
         super().__init__()
         self.subset = subset  # One of the following: [train, test]
-        self.file = osp.join(dir_path, subset + ".wtag")
-        self.datareader = PosDataReader(self.file, word_dict, pos_dict)
+        self.file = osp.join(dir_path, subset + ".labeled")
+        self.datareader = DepDataReader(self.file, word_dict, pos_dict)
         self.vocab_size = len(self.datareader.word_dict)
         if word_embeddings:
             self.word_idx_mappings, self.idx_word_mappings, self.word_vectors = word_embeddings
@@ -63,10 +66,16 @@ class PosDataset(Dataset):
         word_embed_idx, pos_embed_idx, sentence_len = self.sentences_dataset[index]
         return word_embed_idx, pos_embed_idx, sentence_len
 
-    @staticmethod
-    def init_word_embeddings(word_dict):
-        glove = Vocab(Counter(word_dict), vectors="glove.6B.300d", specials=SPECIAL_TOKENS)
-        return glove.stoi, glove.itos, glove.vectors
+    # @staticmethod
+    def init_word_embeddings(self, word_dict):
+        # glove = Vocab(Counter(word_dict), vectors="glove.6B.300d", specials=SPECIAL_TOKENS)
+        # return glove.stoi, glove.itos, glove.vectors
+        vectors = torch.zeros((self.vocab_size+len(SPECIAL_TOKENS),WORD_EMBED_SIZE))
+        word_to_idx, idx_to_word = {},{}
+        for idx, word in enumerate(SPECIAL_TOKENS+list(self.datareader.word_dict.keys())):
+            word_to_idx[word] = idx
+            idx_to_word[idx] = word
+        return word_to_idx, idx_to_word, vectors
 
     def get_word_embeddings(self):
         return self.word_idx_mappings, self.idx_word_mappings, self.word_vectors
@@ -114,4 +123,17 @@ class PosDataset(Dataset):
         return {i: sample_tuple for i, sample_tuple in enumerate(zip(sentence_word_idx_list,
                                                                      sentence_pos_idx_list,
                                                                      sentence_len_list))}
+
+
+if __name__ == "__main__":
+    path_train = "data_new/train.labeled"
+    path_test = "data_new/test.labeled"
+    paths_list = [path_train, path_test]
+    word_dict, pos_dict = get_vocabs(paths_list)
+    train = DepDataset(word_dict, pos_dict, 'data_new', 'train', padding=False)
+    train_dataloader = DataLoader(train, shuffle=True)
+    test = DepDataset(word_dict, pos_dict, 'data_new', 'test', padding=False)
+    test_dataloader = DataLoader(test, shuffle=False)
+    print("Number of Train Tagged Sentences ", len(train))
+    print("Number of Test Tagged Sentences ", len(test))
 
