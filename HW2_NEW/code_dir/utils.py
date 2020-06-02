@@ -24,7 +24,7 @@ def split(string, delimiters):
     return stack
 
 
-def get_vocabs(list_of_paths):
+def get_vocabs_dep_parser(list_of_paths):
     """
         Extract vocabs from given datasets. Return a word2ids and tag2idx.
         :param file_paths: a list with a full path for all corpuses
@@ -47,6 +47,29 @@ def get_vocabs(list_of_paths):
                 #     word, pos_tag = split(word_and_tag, '_')
                 #     word_dict[word] += 1
                 #     pos_dict[pos_tag] += 1
+
+    return word_dict, pos_dict
+
+
+def get_vocabs(list_of_paths):
+    """
+        Extract vocabs from given datasets. Return a word2ids and tag2idx.
+        :param file_paths: a list with a full path for all corpuses
+            Return:
+              - word2idx
+              - tag2idx
+    """
+    word_dict = defaultdict(int)
+    pos_dict = defaultdict(int)
+    for file_path in list_of_paths:
+        with open(file_path) as f:
+            for line in f:
+                splited_words = split(line, (' ', '\n'))
+                del splited_words[-1]
+                for word_and_tag in splited_words:
+                    word, pos_tag = split(word_and_tag, '_')
+                    word_dict[word] += 1
+                    pos_dict[pos_tag] += 1
 
     return word_dict, pos_dict
 

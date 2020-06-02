@@ -1,6 +1,6 @@
 from collections import defaultdict
 import torch
-from utils import split, get_vocabs, WORD_IDX, POS_IDX
+from utils import split, get_vocabs, get_vocabs_dep_parser, WORD_IDX, POS_IDX
 from torchtext.vocab import Vocab
 from torch.utils.data.dataset import Dataset, TensorDataset
 from torch.utils.data.dataloader import DataLoader
@@ -11,6 +11,7 @@ import os.path as osp
 
 WORD_EMBED_SIZE = 100
 POS_EMBED_SIZE = 25
+
 
 class PosDataReader:
     def __init__(self, file, word_dict, pos_dict):
@@ -236,7 +237,7 @@ if __name__ == "__main__":
     path_train = "data_new/train.labeled"
     path_test = "data_new/test.labeled"
     paths_list = [path_train, path_test]
-    word_dict, pos_dict = get_vocabs(paths_list)
+    word_dict, pos_dict = get_vocabs_dep_parser(paths_list)
     train = DepDataset(word_dict, pos_dict, 'data_new', 'train', padding=False)
     train_dataloader = DataLoader(train, shuffle=True)
     test = DepDataset(word_dict, pos_dict, 'data_new', 'test', padding=False)
