@@ -60,6 +60,6 @@ class DnnSepParser(nn.Module):
         tag_embeds = self.tag_embedding(tag_idx_tensor.to(self.device))  # [batch_size, seq_length, tag_emb_dim]
         concat_emb = torch.cat([word_embeds, tag_embeds], dim=2)  # [batch_size, seq_length, word_emb_dim+tag_emb_dim]
         lstm_out, _ = self.lstm(concat_emb)  # [seq_length, batch_size, 2*hidden_dim]
-        tag_space = self.hidden2tag(lstm_out.view(concat_emb.shape[1], -1))  # [seq_length, tag_dim]
-        tag_scores = F.log_softmax(tag_space, dim=1)  # [seq_length, tag_dim]
-        return tag_scores
+        dep_space = self.hidden2tag(lstm_out.view(concat_emb.shape[1], -1))  # [seq_length, tag_dim]
+        dep_scores = F.log_softmax(dep_space, dim=1)  # [seq_length, tag_dim]
+        return dep_scores
