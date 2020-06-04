@@ -1,7 +1,9 @@
 import time
 import os
 import torch
+import numpy as np
 from torch.utils.data.dataloader import DataLoader
+from chu_liu_edmonds import decode_mst
 
 
 class Trainer:
@@ -164,15 +166,29 @@ class Trainer:
     @staticmethod
     def calculate_accuracy_dep_parser(model, dataloader, len_data, device):
         acc = 0
-        # with torch.no_grad():
-        #     for batch_idx, input_data in enumerate(dataloader):
-        #         words_idx_tensor, pos_idx_tensor, dep_idx_tensor, sentence_length = input_data
-        #         dep_scores = model(words_idx_tensor, pos_idx_tensor)
-        #         dep_scores = dep_scores.unsqueeze(0).permute(0, 2, 1)
-        #
-        #         _, indices = torch.max(dep_scores, 1)
-        #         # TODO: fix acc calculation according to UAS
-        #         acc += torch.mean(torch.tensor(pos_idx_tensor.to("cpu") == indices.to("cpu"), dtype=torch.float))
-        #     acc = acc / len_data
-        #     acc *= 100
+        with torch.no_grad():
+            for batch_idx, input_data in enumerate(dataloader):
+                words_idx_tensor, pos_idx_tensor, dep_idx_tensor, sentence_length = input_data
+                dep_scores = model(words_idx_tensor, pos_idx_tensor)
+                dep_scores = dep_scores.unsqueeze(0).permute(0, 2, 1)
+                dep_scores = dep_scores.squeeze(0)
+                # print(f'dep_scores shape: {dep_scores.shape}')
+                our_heads, _ = decode_mst(energy=dep_scores.cpu(), length=sentence_length, has_labels=False)
+                # _, indices = torch.max(dep_scores, 1)
+                # TODO: fix acc calculation according to UAS
+                dep_idx_tensor = dep_idx_tensor.squeeze(0)
+                # print(f'dep_idx_tensor shape: {dep_idx_tensor.shape}')
+                # print(f'dep_idx_tensor: {dep_idx_tensor}')
+                # print(f'our_heads shape: {our_heads.shape}')
+                # print(f'our_heads: {our_heads}')
+                # print(f'type our_heads: {type(our_heads)}')
+                # print(f'dep_idx_tensor.numpy() == our_heads: {dep_idx_tensor.numpy() == our_heads}')
+                acc += np.mean(dep_idx_tensor.numpy() == our_heads)
+                # print(f'acc: {acc}')
+            acc = acc / len_data
+            acc *= 100
         return acc
+
+
+if __name__ == '__main__':
+    dep_scores_example = torch.Tensor([[], []])
