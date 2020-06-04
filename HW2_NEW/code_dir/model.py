@@ -24,12 +24,12 @@ class DnnPosTagger(nn.Module):
     def forward(self, word_idx_tensor):
         # get embedding of input
         embeds = self.word_embedding(word_idx_tensor.to(self.device))  # [batch_size, seq_length, emb_dim]
-        print(f'embeds shape: {embeds.shape}')
+        # print(f'embeds shape: {embeds.shape}')
         lstm_out, _ = self.lstm(embeds)
-        print(f'lstm_out shape: {lstm_out.shape}')
-        print(f'lstm_out.view(embeds.shape[1], -1) shape: {lstm_out.view(embeds.shape[1], -1).shape}')
+        # print(f'lstm_out shape: {lstm_out.shape}')
+        # print(f'lstm_out.view(embeds.shape[1], -1) shape: {lstm_out.view(embeds.shape[1], -1).shape}')
         tag_space = self.hidden2tag(lstm_out.view(embeds.shape[1], -1))  # [seq_length, tag_dim]
-        print(f'tag_space shape: {tag_space.shape}')
+        # print(f'tag_space shape: {tag_space.shape}')
         tag_scores = F.log_softmax(tag_space, dim=1)  # [seq_length, tag_dim]
         return tag_scores
 
