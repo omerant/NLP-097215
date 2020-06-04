@@ -6,7 +6,7 @@ from torch.utils.data.dataset import Dataset, TensorDataset
 from torch.utils.data.dataloader import DataLoader
 from pathlib import Path
 from collections import Counter
-from constants import PAD_TOKEN, SPECIAL_TOKENS, UNKNOWN_TOKEN
+from constants import PAD_TOKEN, SPECIAL_TOKENS, UNKNOWN_TOKEN, ROOT_TOKEN
 import os.path as osp
 
 WORD_EMBED_SIZE = 100

@@ -64,4 +64,5 @@ class DnnSepParser(nn.Module):
         lstm_out, _ = self.lstm(concat_emb)  # [seq_length, batch_size, 2*hidden_dim]
         dep_space = self.hidden2dep(lstm_out.view(concat_emb.shape[1], -1))  # [seq_length, tag_dim]
         dep_scores = F.log_softmax(dep_space, dim=1)  # [seq_length, tag_dim]
+
         return dep_scores

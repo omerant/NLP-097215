@@ -85,7 +85,9 @@ class Trainer:
                          len_train: int, len_test: int, early_stopping: bool = None):
         epochs_without_improvement = 0
         train_acc_list = []
+        train_loss_list = []
         val_acc_list = []
+        val_loss_list = []
         best_val_acc = 0.
         for epoch in range(1, num_epochs + 1):
             self.model.train()  # put in training mode
@@ -108,17 +110,24 @@ class Trainer:
                 if i % acumulate_grad_steps == 0:
                     self.optimizer.step()
                     self.model.zero_grad()
+
                 running_epoch_loss += loss.data.item()
             # Normalizing the loss by the total number of train batches
             running_epoch_loss /= len_train
+            train_loss_list.append(running_epoch_loss)
             # Calculate training/test set accuracy of the existing model
-            train_accuracy = self.calculate_accuracy_dep_parser(self.model, dl_train, len_train, self.device)
+            train_accuracy, _ = self.calculate_accuracy_dep_parser(self.model, dl_train, len_train, self.loss_fn,
+                                                                   self.device, acumulate_grad_steps)
             train_acc_list.append(train_accuracy)
-            cur_epoch_val_accuracy = self.calculate_accuracy_dep_parser(self.model, dl_val, len_test, self.device)
+            cur_epoch_val_accuracy, cur_epoch_val_loss = self.calculate_accuracy_dep_parser(self.model, dl_val,
+                                                                                            len_test, self.loss_fn,
+                                                                                            self.device, acumulate_grad_steps)
+            val_loss_list.append(cur_epoch_val_loss)
             val_acc_list.append(cur_epoch_val_accuracy)
-            log = "Epoch: {} | Loss: {:.4f} | Training accuracy: {:.3f}% | Test accuracy: {:.3f}% | ".format(epoch,
+            log = "Epoch: {} | Training Loss: {:.4f} | Training accuracy: {:.3f}% | Test Loss: {:.4f} | Test accuracy: {:.3f}% | ".format(epoch,
                                                                                                              running_epoch_loss,
                                                                                                              train_accuracy,
+                                                                                                             cur_epoch_val_loss,
                                                                                                              cur_epoch_val_accuracy)
             epoch_time = time.time() - epoch_time
             log += "Epoch Time: {:.2f} secs".format(epoch_time)
@@ -140,7 +149,9 @@ class Trainer:
                 state = {
                     'net': self.model.state_dict(),
                     'epoch': epoch,
+                    'val_loss_list': val_loss_list,
                     'val_acc_list': val_acc_list,
+                    'train_loss_list': train_loss_list,
                     'train_acc_list': train_acc_list
                 }
                 print('saving model')
@@ -164,30 +175,35 @@ class Trainer:
         return acc
 
     @staticmethod
-    def calculate_accuracy_dep_parser(model, dataloader, len_data, device):
+    def calculate_accuracy_dep_parser(model, dataloader, len_data, loss_fn, device, acumulate_grad_steps):
         acc = 0
+        loss = 0
         with torch.no_grad():
             for batch_idx, input_data in enumerate(dataloader):
                 words_idx_tensor, pos_idx_tensor, dep_idx_tensor, sentence_length = input_data
                 dep_scores = model(words_idx_tensor, pos_idx_tensor)
                 dep_scores = dep_scores.unsqueeze(0).permute(0, 2, 1)
-                dep_scores = dep_scores.squeeze(0)
+                dep_scores_2d = dep_scores.squeeze(0)
                 # print(f'dep_scores shape: {dep_scores.shape}')
-                our_heads, _ = decode_mst(energy=dep_scores.cpu(), length=sentence_length, has_labels=False)
+                our_heads, _ = decode_mst(energy=dep_scores_2d.cpu(), length=sentence_length, has_labels=False)
                 # _, indices = torch.max(dep_scores, 1)
                 # TODO: fix acc calculation according to UAS
-                dep_idx_tensor = dep_idx_tensor.squeeze(0)
+                dep_idx_tensor_2d = dep_idx_tensor.squeeze(0)
                 # print(f'dep_idx_tensor shape: {dep_idx_tensor.shape}')
                 # print(f'dep_idx_tensor: {dep_idx_tensor}')
                 # print(f'our_heads shape: {our_heads.shape}')
                 # print(f'our_heads: {our_heads}')
                 # print(f'type our_heads: {type(our_heads)}')
                 # print(f'dep_idx_tensor.numpy() == our_heads: {dep_idx_tensor.numpy() == our_heads}')
-                acc += np.mean(dep_idx_tensor.numpy() == our_heads)
+                acc += np.mean(dep_idx_tensor_2d.numpy() == our_heads)
+
+                loss += loss_fn(dep_scores, dep_idx_tensor.to(device))
+
                 # print(f'acc: {acc}')
             acc = acc / len_data
             acc *= 100
-        return acc
+            loss = loss / (len_data*acumulate_grad_steps)
+        return acc, loss
 
 
 if __name__ == '__main__':
