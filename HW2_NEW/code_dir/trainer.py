@@ -30,7 +30,9 @@ class Trainer:
                 tag_scores = self.model(words_idx_tensor)
                 tag_scores = tag_scores.unsqueeze(0).permute(0, 2, 1)
                 # print("tag_scores shape -", tag_scores.shape)
+                # print(f'tag_scores: {tag_scores}')
                 # print("pos_idx_tensor shape -", pos_idx_tensor.shape)
+                # print(f'pos_idx_tensor: {pos_idx_tensor}')
                 loss = self.loss_fn(tag_scores, pos_idx_tensor.to(self.device))
                 loss = loss / acumulate_grad_steps
                 loss.backward()

@@ -178,7 +178,7 @@ class DepDataset(Dataset):
     def init_word_embeddings(self, word_dict):
         # glove = Vocab(Counter(word_dict), vectors="glove.6B.300d", specials=SPECIAL_TOKENS)
         # return glove.stoi, glove.itos, glove.vectors
-        vectors = torch.zeros((self.vocab_size+len(SPECIAL_TOKENS),WORD_EMBED_SIZE))
+        vectors = torch.zeros((self.vocab_size+len(SPECIAL_TOKENS), WORD_EMBED_SIZE))
         word_to_idx, idx_to_word = {},{}
         for idx, word in enumerate(SPECIAL_TOKENS+list(self.datareader.word_dict.keys())):
             word_to_idx[word] = idx

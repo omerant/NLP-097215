@@ -31,10 +31,9 @@ if __name__ == '__main__':
     log_prob_y_pred_out = F.log_softmax(y_pred, 2)
     my_loss = loss_fn(log_prob_y_pred_out, y_true_out)
     print(my_loss)
-    prob_y_pred = F.softmax(y_pred, 2)
 
     loss_fn = torch.nn.NLLLoss()
-    lib_loss = loss_fn(torch.log(prob_y_pred), y_true_out)
+    lib_loss = loss_fn(log_prob_y_pred_out, y_true_out)
     print(lib_loss)
     assert lib_loss == my_loss
 
