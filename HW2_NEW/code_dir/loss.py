@@ -37,4 +37,12 @@ if __name__ == '__main__':
     print(lib_loss)
     assert lib_loss == my_loss
 
+    # TEST IGNORE INDEX
+    y_pred_test = torch.tensor(([[0.88, 0.12], [0.51, 0.49]], [[0.88, 0.12], [0.51, 0.49]], [[0.88, 0.12], [0.51, 0.49]]),
+                          dtype=torch.float)
+    y_true_test = torch.tensor([[0, -20], [-20, -20], [-20, -20]])
 
+    loss_fn = torch.nn.NLLLoss(ignore_index=-20)
+    log_prob_y_pred_out = F.log_softmax(y_pred_test, 2)
+    ignore_index_loss = loss_fn(log_prob_y_pred_out, y_true_test)
+    print(f'with ignore index: {ignore_index_loss}')
