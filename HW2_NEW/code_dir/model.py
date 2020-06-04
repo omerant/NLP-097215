@@ -35,25 +35,24 @@ class DnnPosTagger(nn.Module):
 
 
 class DnnSepParser(nn.Module):
-    def __init__(self, word_emb_dim, tag_emb_dim, hidden_dim, num_layers, word_vocab_size, tag_vocab_size, max_sentence_len):
+    def __init__(self, word_emb_dim, tag_emb_dim, num_layers, word_vocab_size, tag_vocab_size, max_sentence_len):
         """
         :param word_emb_dim: dimension of word embedding
         :param tag_emb_dim: dimension of tag embedding
         :param word_vocab_size: used to create word embeddings
-        :param hidden_dim: number of hidden layers in LSTM
         :param num_layers: number of stack layers in LSTM
         :param tag_vocab_size: used to create tag embeddings
         :param max_sentence_len: used to determine the output size of MLP
         """
         super(DnnSepParser, self).__init__()
-        self.hidden_dim = hidden_dim
+        self.hidden_dim = word_emb_dim + tag_emb_dim
         self.num_layers = num_layers
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.word_embedding = nn.Embedding(word_vocab_size, word_emb_dim)
         self.tag_embedding = nn.Embedding(tag_vocab_size, tag_emb_dim)
-        self.lstm = nn.LSTM(input_size=word_emb_dim + tag_emb_dim, hidden_size=hidden_dim, num_layers=num_layers,
-                            bidirectional=True, batch_first=False)
-        self.hidden2dep = nn.Linear(hidden_dim * 2, max_sentence_len)
+        self.encoder = nn.LSTM(input_size=word_emb_dim + tag_emb_dim, hidden_size=self.hidden_dim, num_layers=num_layers,
+                               bidirectional=True, batch_first=False)
+        self.hidden2dep = nn.Linear(self.hidden_dim * 2, max_sentence_len)
         self.name = 'DnnDepParser' + '_' + str(self.hidden_dim) + '_' + str(self.num_layers)
 
     def forward(self, word_idx_tensor, tag_idx_tensor):
@@ -61,7 +60,7 @@ class DnnSepParser(nn.Module):
         word_embeds = self.word_embedding(word_idx_tensor.to(self.device))  # [batch_size, seq_length, word_emb_dim]
         tag_embeds = self.tag_embedding(tag_idx_tensor.to(self.device))  # [batch_size, seq_length, tag_emb_dim]
         concat_emb = torch.cat([word_embeds, tag_embeds], dim=2)  # [batch_size, seq_length, word_emb_dim+tag_emb_dim]
-        lstm_out, _ = self.lstm(concat_emb)  # [seq_length, batch_size, 2*hidden_dim]
+        lstm_out, _ = self.encoder(concat_emb)  # [seq_length, batch_size, 2*hidden_dim]
         dep_space = self.hidden2dep(lstm_out.view(concat_emb.shape[1], -1))  # [seq_length, tag_dim]
         dep_scores = F.log_softmax(dep_space, dim=1)  # [seq_length, tag_dim]
 
