@@ -167,12 +167,12 @@ class Trainer:
         acc = 0
         with torch.no_grad():
             for batch_idx, input_data in enumerate(dataloader):
-                words_idx_tensor, pos_idx_tensor, dep_idx_tensor, sentence_length = data
+                words_idx_tensor, pos_idx_tensor, dep_idx_tensor, sentence_length = input_data
                 dep_scores = model(words_idx_tensor, pos_idx_tensor)
                 dep_scores = dep_scores.unsqueeze(0).permute(0, 2, 1)
 
                 _, indices = torch.max(dep_scores, 1)
-                # TODO: fix acc calculation according to UAS 
+                # TODO: fix acc calculation according to UAS
                 acc += torch.mean(torch.tensor(pos_idx_tensor.to("cpu") == indices.to("cpu"), dtype=torch.float))
             acc = acc / len_data
             acc *= 100
