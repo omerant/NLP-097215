@@ -43,9 +43,9 @@ class Trainer:
             # Normalizing the loss by the total number of train batches
             running_epoch_loss /= len_train
             # Calculate training/test set accuracy of the existing model
-            train_accuracy = self.calculate_accuracy(self.model, dl_train, len_train, self.device)
+            train_accuracy = self.calculate_accuracy_pos_tagging(self.model, dl_train, len_train, self.device)
             train_acc_list.append(train_accuracy)
-            cur_epoch_val_accuracy = self.calculate_accuracy(self.model, dl_val, len_test, self.device)
+            cur_epoch_val_accuracy = self.calculate_accuracy_pos_tagging(self.model, dl_val, len_test, self.device)
             val_acc_list.append(cur_epoch_val_accuracy)
             log = "Epoch: {} | Loss: {:.4f} | Training accuracy: {:.3f}% | Test accuracy: {:.3f}% | ".format(epoch,
                                                                                                              running_epoch_loss,
@@ -111,9 +111,9 @@ class Trainer:
             # Normalizing the loss by the total number of train batches
             running_epoch_loss /= len_train
             # Calculate training/test set accuracy of the existing model
-            train_accuracy = self.calculate_accuracy(self.model, dl_train, len_train, self.device)
+            train_accuracy = self.calculate_accuracy_dep_parser(self.model, dl_train, len_train, self.device)
             train_acc_list.append(train_accuracy)
-            cur_epoch_val_accuracy = self.calculate_accuracy(self.model, dl_val, len_test, self.device)
+            cur_epoch_val_accuracy = self.calculate_accuracy_dep_parser(self.model, dl_val, len_test, self.device)
             val_acc_list.append(cur_epoch_val_accuracy)
             log = "Epoch: {} | Loss: {:.4f} | Training accuracy: {:.3f}% | Test accuracy: {:.3f}% | ".format(epoch,
                                                                                                              running_epoch_loss,
@@ -147,21 +147,8 @@ class Trainer:
 
         print('==> Finished Training ...')
 
-    def evaluate(self, test_dataloader, len_test):
-        acc = 0
-        with torch.no_grad():
-            for batch_idx, input_data in enumerate(test_dataloader):
-                words_idx_tensor, pos_idx_tensor, sentence_length = input_data
-                tag_scores = self.model(words_idx_tensor)
-                tag_scores = tag_scores.unsqueeze(0).permute(0, 2, 1)
-
-                _, indices = torch.max(tag_scores, 1)
-                acc += torch.mean(torch.tensor(pos_idx_tensor.to("cpu") == indices.to("cpu"), dtype=torch.float))
-            acc = acc / len_test
-        return acc
-
     @staticmethod
-    def calculate_accuracy(model, dataloader, len_data, device):
+    def calculate_accuracy_pos_tagging(model, dataloader, len_data, device):
         acc = 0
         with torch.no_grad():
             for batch_idx, input_data in enumerate(dataloader):
@@ -170,6 +157,22 @@ class Trainer:
                 tag_scores = tag_scores.unsqueeze(0).permute(0, 2, 1)
 
                 _, indices = torch.max(tag_scores, 1)
+                acc += torch.mean(torch.tensor(pos_idx_tensor.to("cpu") == indices.to("cpu"), dtype=torch.float))
+            acc = acc / len_data
+            acc *= 100
+        return acc
+
+    @staticmethod
+    def calculate_accuracy_dep_parser(model, dataloader, len_data, device):
+        acc = 0
+        with torch.no_grad():
+            for batch_idx, input_data in enumerate(dataloader):
+                words_idx_tensor, pos_idx_tensor, dep_idx_tensor, sentence_length = data
+                dep_scores = model(words_idx_tensor, pos_idx_tensor)
+                dep_scores = dep_scores.unsqueeze(0).permute(0, 2, 1)
+
+                _, indices = torch.max(dep_scores, 1)
+                # TODO: fix acc calculation according to UAS 
                 acc += torch.mean(torch.tensor(pos_idx_tensor.to("cpu") == indices.to("cpu"), dtype=torch.float))
             acc = acc / len_data
             acc *= 100
