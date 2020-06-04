@@ -24,9 +24,12 @@ class DnnPosTagger(nn.Module):
     def forward(self, word_idx_tensor):
         # get embedding of input
         embeds = self.word_embedding(word_idx_tensor.to(self.device))  # [batch_size, seq_length, emb_dim]
-        # lstm_out, _ = self.lstm(embeds.view(embeds.shape[1], 1, -1))  # [batch_size, seq_length, , 2*hidden_dim]
+        print(f'embeds shape: {embeds.shape}')
         lstm_out, _ = self.lstm(embeds)
+        print(f'lstm_out shape: {lstm_out.shape}')
+        print(f'lstm_out.view(embeds.shape[1], -1) shape: {lstm_out.view(embeds.shape[1], -1).shape}')
         tag_space = self.hidden2tag(lstm_out.view(embeds.shape[1], -1))  # [seq_length, tag_dim]
+        print(f'tag_space shape: {tag_space.shape}')
         tag_scores = F.log_softmax(tag_space, dim=1)  # [seq_length, tag_dim]
         return tag_scores
 
@@ -53,9 +56,10 @@ class DnnSepParser(nn.Module):
 
     def forward(self, word_idx_tensor, tag_idx_tensor):
         # get embedding of input
-        word_embeds = self.word_embedding(word_idx_tensor.to(self.device))  # [batch_size, seq_length, emb_dim]
-        tag_embeds = self.tag_embedding(tag_idx_tensor.to(self.device))  # [batch_size, seq_length, emb_dim]
-        lstm_out, _ = self.lstm(word_embeds.view(word_embeds.shape[1], 1, -1))  # [seq_length, batch_size, 2*hidden_dim]
-        tag_space = self.hidden2tag(lstm_out.view(word_embeds.shape[1], -1))  # [seq_length, tag_dim]
+        word_embeds = self.word_embedding(word_idx_tensor.to(self.device))  # [batch_size, seq_length, word_emb_dim]
+        tag_embeds = self.tag_embedding(tag_idx_tensor.to(self.device))  # [batch_size, seq_length, tag_emb_dim]
+        concat_emb = torch.cat([word_embeds, tag_embeds], dim=2)  # [batch_size, seq_length, word_emb_dim+tag_emb_dim]
+        lstm_out, _ = self.lstm(concat_emb)  # [seq_length, batch_size, 2*hidden_dim]
+        tag_space = self.hidden2tag(lstm_out.view(concat_emb.shape[1], -1))  # [seq_length, tag_dim]
         tag_scores = F.log_softmax(tag_space, dim=1)  # [seq_length, tag_dim]
         return tag_scores
