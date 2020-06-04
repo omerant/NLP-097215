@@ -1,7 +1,7 @@
 from collections import defaultdict
 import torch
-from utils import split, get_vocabs, get_vocabs_dep_parser, WORD_IDX, POS_IDX, HEAD_IDX
-from torchtext.vocab import Vocab
+from utils import split, get_vocabs, get_vocabs_dep_parser, WORD_IDX, POS_IDX, HEAD_IDX, IGNORE_IDX
+# from torchtext.vocab import Vocab
 from torch.utils.data.dataset import Dataset, TensorDataset
 from torch.utils.data.dataloader import DataLoader
 from pathlib import Path
@@ -217,20 +217,23 @@ class DepDataset(Dataset):
                 pos_idx_list.append(self.pos_idx_mappings.get(pos))
                 head_idx_list.append(int(head))
             sentence_len = len(words_idx_list)
-            # if padding:
-            #     while len(words_idx_list) < self.max_seq_len:
-            #         words_idx_list.append(self.word_idx_mappings.get(PAD_TOKEN))
-            #         pos_idx_list.append(self.pos_idx_mappings.get(PAD_TOKEN))
+            if padding:
+                while len(words_idx_list) < self.max_seq_len:
+                    words_idx_list.append(self.word_idx_mappings.get(PAD_TOKEN))
+                    pos_idx_list.append(self.pos_idx_mappings.get(PAD_TOKEN))
+                    sentence_head_idx_list.append(IGNORE_IDX)
+
             sentence_word_idx_list.append(torch.tensor(words_idx_list, dtype=torch.long, requires_grad=False))
             sentence_pos_idx_list.append(torch.tensor(pos_idx_list, dtype=torch.long, requires_grad=False))
             sentence_head_idx_list.append(torch.tensor(head_idx_list, dtype=torch.long, requires_grad=False))
             sentence_len_list.append(sentence_len)
 
-        # if padding:
-        #     all_sentence_word_idx = torch.tensor(sentence_word_idx_list, dtype=torch.long)
-        #     all_sentence_pos_idx = torch.tensor(sentence_pos_idx_list, dtype=torch.long)
-        #     all_sentence_len = torch.tensor(sentence_len_list, dtype=torch.long, requires_grad=False)
-        #     return TensorDataset(all_sentence_word_idx, all_sentence_pos_idx, all_sentence_len)
+        if padding:
+            all_sentence_word_idx = torch.tensor(sentence_word_idx_list, dtype=torch.long)
+            all_sentence_pos_idx = torch.tensor(sentence_pos_idx_list, dtype=torch.long)
+            all_sentence_head_idx = torch.tensor(sentence_head_idx_list, dtype=torch.long)
+            all_sentence_len = torch.tensor(sentence_len_list, dtype=torch.long, requires_grad=False)
+            return TensorDataset(all_sentence_word_idx, all_sentence_pos_idx, all_sentence_head_idx, all_sentence_len)
 
         return {i: sample_tuple for i, sample_tuple in enumerate(zip(sentence_word_idx_list,
                                                                      sentence_pos_idx_list,

@@ -3,6 +3,7 @@ from collections import defaultdict
 WORD_IDX = 1
 POS_IDX = 3
 HEAD_IDX = 6
+IGNORE_IDX = -20
 
 
 def split(string, delimiters):

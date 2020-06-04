@@ -79,7 +79,6 @@ class Trainer:
 
         print('==> Finished Training ...')
 
-
     def train_dep_parser(self, num_epochs: int, dl_train: DataLoader, dl_val: DataLoader, acumulate_grad_steps: int,
                          len_train: int, len_test: int, early_stopping: bool = None):
         epochs_without_improvement = 0
@@ -165,15 +164,15 @@ class Trainer:
     @staticmethod
     def calculate_accuracy_dep_parser(model, dataloader, len_data, device):
         acc = 0
-        with torch.no_grad():
-            for batch_idx, input_data in enumerate(dataloader):
-                words_idx_tensor, pos_idx_tensor, dep_idx_tensor, sentence_length = input_data
-                dep_scores = model(words_idx_tensor, pos_idx_tensor)
-                dep_scores = dep_scores.unsqueeze(0).permute(0, 2, 1)
-
-                _, indices = torch.max(dep_scores, 1)
-                # TODO: fix acc calculation according to UAS
-                acc += torch.mean(torch.tensor(pos_idx_tensor.to("cpu") == indices.to("cpu"), dtype=torch.float))
-            acc = acc / len_data
-            acc *= 100
+        # with torch.no_grad():
+        #     for batch_idx, input_data in enumerate(dataloader):
+        #         words_idx_tensor, pos_idx_tensor, dep_idx_tensor, sentence_length = input_data
+        #         dep_scores = model(words_idx_tensor, pos_idx_tensor)
+        #         dep_scores = dep_scores.unsqueeze(0).permute(0, 2, 1)
+        #
+        #         _, indices = torch.max(dep_scores, 1)
+        #         # TODO: fix acc calculation according to UAS
+        #         acc += torch.mean(torch.tensor(pos_idx_tensor.to("cpu") == indices.to("cpu"), dtype=torch.float))
+        #     acc = acc / len_data
+        #     acc *= 100
         return acc
