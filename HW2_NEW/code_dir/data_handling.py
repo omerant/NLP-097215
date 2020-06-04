@@ -1,6 +1,6 @@
 from collections import defaultdict
 import torch
-from utils import split, get_vocabs, get_vocabs_dep_parser, WORD_IDX, POS_IDX
+from utils import split, get_vocabs, get_vocabs_dep_parser, WORD_IDX, POS_IDX, HEAD_IDX
 from torchtext.vocab import Vocab
 from torch.utils.data.dataset import Dataset, TensorDataset
 from torch.utils.data.dataloader import DataLoader
@@ -138,7 +138,7 @@ class DepDataReader:
                     cur_sentence=[]
                     continue
                 splited_words = split(line, (' ', '\n', '\t'))
-                cur_sentence.append((splited_words[WORD_IDX],splited_words[POS_IDX]))
+                cur_sentence.append((splited_words[WORD_IDX],splited_words[POS_IDX],splited_words[HEAD_IDX]))
 
     def get_num_sentences(self):
         """returns num of sentences in data"""
@@ -171,8 +171,8 @@ class DepDataset(Dataset):
         return len(self.sentences_dataset)
 
     def __getitem__(self, index):
-        word_embed_idx, pos_embed_idx, sentence_len = self.sentences_dataset[index]
-        return word_embed_idx, pos_embed_idx, sentence_len
+        word_embed_idx, pos_embed_idx, head_idx, sentence_len = self.sentences_dataset[index]
+        return word_embed_idx, pos_embed_idx, head_idx, sentence_len
 
     # @staticmethod
     def init_word_embeddings(self, word_dict):
@@ -206,13 +206,16 @@ class DepDataset(Dataset):
     def convert_sentences_to_dataset(self, padding):
         sentence_word_idx_list = list()
         sentence_pos_idx_list = list()
+        sentence_head_idx_list = list()
         sentence_len_list = list()
         for sentence_idx, sentence in enumerate(self.datareader.sentences):
             words_idx_list = []
             pos_idx_list = []
-            for word, pos in sentence:
+            head_idx_list = []
+            for word, pos, head in sentence:
                 words_idx_list.append(self.word_idx_mappings.get(word))
                 pos_idx_list.append(self.pos_idx_mappings.get(pos))
+                head_idx_list.append(int(head))
             sentence_len = len(words_idx_list)
             # if padding:
             #     while len(words_idx_list) < self.max_seq_len:
@@ -220,6 +223,7 @@ class DepDataset(Dataset):
             #         pos_idx_list.append(self.pos_idx_mappings.get(PAD_TOKEN))
             sentence_word_idx_list.append(torch.tensor(words_idx_list, dtype=torch.long, requires_grad=False))
             sentence_pos_idx_list.append(torch.tensor(pos_idx_list, dtype=torch.long, requires_grad=False))
+            sentence_head_idx_list.append(torch.tensor(head_idx_list, dtype=torch.long, requires_grad=False))
             sentence_len_list.append(sentence_len)
 
         # if padding:
@@ -230,6 +234,7 @@ class DepDataset(Dataset):
 
         return {i: sample_tuple for i, sample_tuple in enumerate(zip(sentence_word_idx_list,
                                                                      sentence_pos_idx_list,
+                                                                     sentence_head_idx_list,
                                                                      sentence_len_list))}
 
 
