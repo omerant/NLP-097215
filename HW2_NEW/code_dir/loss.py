@@ -1,4 +1,5 @@
 import torch
+import torch.nn.functional as F
 
 
 class NllLoss(torch.nn.Module):
@@ -6,20 +7,27 @@ class NllLoss(torch.nn.Module):
     def __init__(self):
         super(NllLoss, self).__init__()
 
-    def forward(self, y_true, y_pred)->torch.Tensor:
-        Y_i_size = torch.sum(y_true == True).item()
-        y_pred_exp = torch.exp(y_pred)
-        prob_y_pred = y_pred_exp / y_pred_exp.sum(dim=0)
-        loss = -(1. / Y_i_size) * torch.sum(torch.log(prob_y_pred[torch.where(y_true)]))
-        return loss
+    def forward(self, y_true, y_pred) -> torch.Tensor:
+        Y_i_size = y_true.shape[0]
+        prob_y_pred = F.softmax(y_pred, 1)
+        our_loss = -(1. / Y_i_size) * torch.sum(torch.log(prob_y_pred.gather(1, y_true.unsqueeze(1))))
+        return our_loss
 
 
 if __name__ == '__main__':
-    y_true = torch.LongTensor([[False, True, False], [False, False, True], [False, False, False]])
-    y_pred = torch.Tensor([[0, 1, 2.], [1, 0, 0.5], [0, 1, 0]])
-    y_pred.requires_grad = True
+
+    y_pred = torch.tensor(([0.88, 0.12], [0.51, 0.49]), dtype=torch.float)
+    y_true = torch.tensor([1, 0])
+
+    # y_pred.requires_grad = True
     loss_fn = NllLoss()
-    l = loss_fn(y_true, y_pred)
-    print(l)
-    l.backward()
+    my_loss = loss_fn(y_true, y_pred)
+    print(my_loss)
+    prob_y_pred = F.softmax(y_pred, 1)
+
+    loss_fn = torch.nn.NLLLoss(reduction='mean')
+    lib_loss = loss_fn(torch.log(prob_y_pred), y_true)
+    print(lib_loss)
+    assert lib_loss == my_loss
+
 
