@@ -17,24 +17,21 @@ class DnnPosTagger(nn.Module):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.word_embedding = nn.Embedding.from_pretrained(word_embeddings, freeze=False)
         self.lstm = nn.LSTM(input_size=emb_dim, hidden_size=hidden_dim, num_layers=num_layers, bidirectional=True,
-                            batch_first=True)
+                            batch_first=False)
         self.hidden2first_mlp = nn.Linear(hidden_dim * 2, tag_vocab_size)
-        self.first_mlp2second_mlp = nn.Linear(tag_vocab_size, tag_vocab_size)
-        self.tanh = nn.Tanh()
+        # self.first_mlp2second_mlp = nn.Linear(tag_vocab_size, tag_vocab_size)
+        # self.tanh = nn.Tanh()
         self.name = 'DnnPosTagger'
 
     def forward(self, word_idx_tensor):
         # get embedding of input
         embeds = self.word_embedding(word_idx_tensor.to(self.device))  # [batch_size, seq_length, emb_dim]
         # print(f'embeds shape: {embeds.shape}')
-        lstm_out, _ = self.lstm(embeds)
+        lstm_out, _ = self.lstm(embeds.view(embeds.shape[1], 1, -1))
         # print(f'lstm_out shape: {lstm_out.shape}')
         # print(f'lstm_out.view(embeds.shape[1], -1) shape: {lstm_out.view(embeds.shape[1], -1).shape}')
         first_mlp_out = self.hidden2first_mlp(lstm_out.view(embeds.shape[1], -1))  # [seq_length, tag_dim]
-        # print(f'tag_space shape: {tag_space.shape}')
-        second_mlp_out = self.first_mlp2second_mlp(self.tanh(first_mlp_out))
-
-        tag_scores = F.log_softmax(second_mlp_out, dim=1)  # [seq_length, tag_dim]
+        tag_scores = F.log_softmax(first_mlp_out, dim=1)  # [seq_length, tag_dim]
         return tag_scores
 
 
