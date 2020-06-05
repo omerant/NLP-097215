@@ -1,7 +1,7 @@
 from collections import defaultdict
 import torch
 from utils import split, get_vocabs, get_vocabs_dep_parser, WORD_IDX, POS_IDX, HEAD_IDX, IGNORE_IDX
-# from torchtext.vocab import Vocab
+from torchtext.vocab import Vocab
 from torch.utils.data.dataset import Dataset, TensorDataset
 from torch.utils.data.dataloader import DataLoader
 from pathlib import Path
@@ -135,7 +135,7 @@ class DepDataReader:
             for line in f:
                 if line == '\n':
                     self.sentences.append(cur_sentence)
-                    cur_sentence=[]
+                    cur_sentence = []
                     continue
                 splited_words = split(line, (' ', '\n', '\t'))
                 cur_sentence.append((splited_words[WORD_IDX],splited_words[POS_IDX],splited_words[HEAD_IDX]))
@@ -221,7 +221,7 @@ class DepDataset(Dataset):
                 while len(words_idx_list) < self.max_seq_len:
                     words_idx_list.append(self.word_idx_mappings.get(PAD_TOKEN))
                     pos_idx_list.append(self.pos_idx_mappings.get(PAD_TOKEN))
-                    sentence_head_idx_list.append(IGNORE_IDX)
+                    head_idx_list.append(IGNORE_IDX)
 
             sentence_word_idx_list.append(torch.tensor(words_idx_list, dtype=torch.long, requires_grad=False))
             sentence_pos_idx_list.append(torch.tensor(pos_idx_list, dtype=torch.long, requires_grad=False))
@@ -229,10 +229,14 @@ class DepDataset(Dataset):
             sentence_len_list.append(sentence_len)
 
         if padding:
-            all_sentence_word_idx = torch.tensor(sentence_word_idx_list, dtype=torch.long)
-            all_sentence_pos_idx = torch.tensor(sentence_pos_idx_list, dtype=torch.long)
-            all_sentence_head_idx = torch.tensor(sentence_head_idx_list, dtype=torch.long)
-            all_sentence_len = torch.tensor(sentence_len_list, dtype=torch.long, requires_grad=False)
+            # all_sentence_word_idx = torch.cat(sentence_word_idx_list, dtype=torch.long)
+            # all_sentence_pos_idx = torch.tensor(sentence_pos_idx_list, dtype=torch.long)
+            # all_sentence_head_idx = torch.tensor(sentence_head_idx_list, dtype=torch.long)
+            # all_sentence_len = torch.tensor(sentence_len_list, dtype=torch.long, requires_grad=False)
+            all_sentence_word_idx = torch.stack(sentence_word_idx_list)
+            all_sentence_pos_idx = torch.stack(sentence_pos_idx_list)
+            all_sentence_head_idx = torch.stack(sentence_head_idx_list)
+            all_sentence_len = torch.tensor(sentence_len_list, requires_grad=False)
             return TensorDataset(all_sentence_word_idx, all_sentence_pos_idx, all_sentence_head_idx, all_sentence_len)
 
         return {i: sample_tuple for i, sample_tuple in enumerate(zip(sentence_word_idx_list,
@@ -246,9 +250,9 @@ if __name__ == "__main__":
     path_test = "data_new/test.labeled"
     paths_list = [path_train, path_test]
     word_dict, pos_dict = get_vocabs_dep_parser(paths_list)
-    train = DepDataset(word_dict, pos_dict, 'data_new', 'train', padding=False)
+    train = DepDataset(word_dict, pos_dict, 'data_new', 'train', padding=True)
     train_dataloader = DataLoader(train, shuffle=True)
-    test = DepDataset(word_dict, pos_dict, 'data_new', 'test', padding=False)
+    test = DepDataset(word_dict, pos_dict, 'data_new', 'test', padding=True)
     test_dataloader = DataLoader(test, shuffle=False)
     print("Number of Train Tagged Sentences ", len(train))
     print("Number of Test Tagged Sentences ", len(test))

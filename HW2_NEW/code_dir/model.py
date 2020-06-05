@@ -18,7 +18,9 @@ class DnnPosTagger(nn.Module):
         self.word_embedding = nn.Embedding.from_pretrained(word_embeddings, freeze=False)
         self.lstm = nn.LSTM(input_size=emb_dim, hidden_size=hidden_dim, num_layers=num_layers, bidirectional=True,
                             batch_first=True)
-        self.hidden2tag = nn.Linear(hidden_dim * 2, tag_vocab_size)
+        self.hidden2first_mlp = nn.Linear(hidden_dim * 2, tag_vocab_size)
+        self.first_mlp2second_mlp = nn.Linear(tag_vocab_size, tag_vocab_size)
+        self.tanh = nn.Tanh()
         self.name = 'DnnPosTagger'
 
     def forward(self, word_idx_tensor):
@@ -28,9 +30,11 @@ class DnnPosTagger(nn.Module):
         lstm_out, _ = self.lstm(embeds)
         # print(f'lstm_out shape: {lstm_out.shape}')
         # print(f'lstm_out.view(embeds.shape[1], -1) shape: {lstm_out.view(embeds.shape[1], -1).shape}')
-        tag_space = self.hidden2tag(lstm_out.view(embeds.shape[1], -1))  # [seq_length, tag_dim]
+        first_mlp_out = self.hidden2first_mlp(lstm_out.view(embeds.shape[1], -1))  # [seq_length, tag_dim]
         # print(f'tag_space shape: {tag_space.shape}')
-        tag_scores = F.log_softmax(tag_space, dim=1)  # [seq_length, tag_dim]
+        second_mlp_out = self.first_mlp2second_mlp(self.tanh(first_mlp_out))
+
+        tag_scores = F.log_softmax(second_mlp_out, dim=1)  # [seq_length, tag_dim]
         return tag_scores
 
 
@@ -52,7 +56,9 @@ class DnnSepParser(nn.Module):
         self.tag_embedding = nn.Embedding(tag_vocab_size, tag_emb_dim)
         self.encoder = nn.LSTM(input_size=word_emb_dim + tag_emb_dim, hidden_size=self.hidden_dim, num_layers=num_layers,
                                bidirectional=True, batch_first=False)
-        self.hidden2dep = nn.Linear(self.hidden_dim * 2, max_sentence_len)
+        self.hidden2first_mlp = nn.Linear(self.hidden_dim * 2, max_sentence_len)
+        self.tanh = torch.nn.Tanh()
+        self.first_mlp2second_mlp = nn.Linear(max_sentence_len, max_sentence_len)
         self.name = 'DnnDepParser' + '_' + str(self.hidden_dim) + '_' + str(self.num_layers)
 
     def forward(self, word_idx_tensor, tag_idx_tensor):
@@ -61,7 +67,8 @@ class DnnSepParser(nn.Module):
         tag_embeds = self.tag_embedding(tag_idx_tensor.to(self.device))  # [batch_size, seq_length, tag_emb_dim]
         concat_emb = torch.cat([word_embeds, tag_embeds], dim=2)  # [batch_size, seq_length, word_emb_dim+tag_emb_dim]
         lstm_out, _ = self.encoder(concat_emb)  # [seq_length, batch_size, 2*hidden_dim]
-        dep_space = self.hidden2dep(lstm_out.view(concat_emb.shape[1], -1))  # [seq_length, tag_dim]
-        dep_scores = F.log_softmax(dep_space, dim=1)  # [seq_length, tag_dim]
+        first_mlp_out = self.hidden2first_mlp(lstm_out.view(concat_emb.shape[1], -1))  # [seq_length, tag_dim]
+        second_mlp_out = self.first_mlp2second_mlp(self.tanh(first_mlp_out))
+        dep_scores = F.log_softmax(second_mlp_out, dim=1)  # [seq_length, tag_dim]
 
         return dep_scores
