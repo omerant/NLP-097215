@@ -1,8 +1,8 @@
 from collections import defaultdict
 
-WORD_IDX = 1
-POS_IDX = 3
-HEAD_IDX = 6
+WORD_IDX_IN_LINE = 1
+POS_IDX_IN_LINE = 3
+HEAD_IDX_IN_LINE = 6
 IGNORE_IDX = -20
 
 
@@ -42,8 +42,8 @@ def get_vocabs_dep_parser(list_of_paths):
                 if line == '\n':
                     continue
                 splited_words = split(line, (' ', '\n', '\t'))
-                word_dict[splited_words[WORD_IDX]] += 1
-                pos_dict[splited_words[POS_IDX]] += 1
+                word_dict[splited_words[WORD_IDX_IN_LINE]] += 1
+                pos_dict[splited_words[POS_IDX_IN_LINE]] += 1
 
     return word_dict, pos_dict
 

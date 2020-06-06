@@ -3,4 +3,7 @@ PAD_TOKEN = "<pad>"  # Optional: this is used to pad a batch of sentences in dif
 # ROOT_TOKEN = PAD_TOKEN # this can be used if you are not padding your batches
 ROOT_TOKEN = "<root>" # use this if you are padding your batches and want a special token for ROOT
 SPECIAL_TOKENS = [PAD_TOKEN, UNKNOWN_TOKEN, ROOT_TOKEN]
+PAD_IDX = 0
+UNK_IDX = 1
+ROOT_IDX = 2
 ALPHA_DROPOUT = 0.25

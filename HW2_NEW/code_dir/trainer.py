@@ -4,6 +4,7 @@ import torch
 import numpy as np
 from torch.utils.data.dataloader import DataLoader
 from chu_liu_edmonds import decode_mst
+from constants import UNK_IDX
 
 
 class Trainer:
@@ -96,8 +97,11 @@ class Trainer:
             i = 0
             for data in dl_train:
                 i += 1
-                # get the inputs
                 word_dropout_prob, words_idx_tensor, pos_idx_tensor, dep_idx_tensor, sentence_length = data
+                # insert dropout
+                bern_distribution = torch.distributions.bernoulli.Bernoulli(word_dropout_prob)
+                words_idx_tensor[bern_distribution.sample().bool()] = UNK_IDX
+
                 dep_scores = self.model(words_idx_tensor, pos_idx_tensor)
                 dep_scores = dep_scores.unsqueeze(0).permute(0, 2, 1)
                 # print("tag_scores shape -", tag_scores.shape)
