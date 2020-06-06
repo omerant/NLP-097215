@@ -1,12 +1,12 @@
 from collections import defaultdict
 import torch
 from utils import split, get_vocabs, get_vocabs_dep_parser, WORD_IDX, POS_IDX, HEAD_IDX, IGNORE_IDX
-from torchtext.vocab import Vocab
+# from torchtext.vocab import Vocab
 from torch.utils.data.dataset import Dataset, TensorDataset
 from torch.utils.data.dataloader import DataLoader
 from pathlib import Path
 from collections import Counter
-from constants import PAD_TOKEN, SPECIAL_TOKENS, UNKNOWN_TOKEN, ROOT_TOKEN
+from constants import PAD_TOKEN, SPECIAL_TOKENS, UNKNOWN_TOKEN, ROOT_TOKEN, ALPHA_DROPOUT
 import os.path as osp
 
 WORD_EMBED_SIZE = 100
@@ -147,8 +147,9 @@ class DepDataReader:
 
 class DepDataset(Dataset):
     def __init__(self, word_dict, pos_dict, dir_path: str, subset: str,
-                 padding=False, word_embeddings=None):
+                 padding=False, word_embeddings=None, is_train=True):
         super().__init__()
+        self.word_dict = word_dict
         self.subset = subset  # One of the following: [train, test]
         self.file = osp.join(dir_path, subset + ".labeled")
         self.datareader = DepDataReader(self.file, word_dict, pos_dict)
@@ -165,14 +166,14 @@ class DepDataset(Dataset):
         self.word_vector_dim = self.word_vectors.size(-1)
         self.sentence_lens = [len(sentence) for sentence in self.datareader.sentences]
         self.max_seq_len = max(self.sentence_lens)
-        self.sentences_dataset = self.convert_sentences_to_dataset(padding)
+        self.sentences_dataset = self.convert_sentences_to_dataset(padding, is_train)
 
     def __len__(self):
         return len(self.sentences_dataset)
 
     def __getitem__(self, index):
-        word_embed_idx, pos_embed_idx, head_idx, sentence_len = self.sentences_dataset[index]
-        return word_embed_idx, pos_embed_idx, head_idx, sentence_len
+        word_dropout_prob, word_embed_idx, pos_embed_idx, head_idx, sentence_len = self.sentences_dataset[index]
+        return word_dropout_prob, word_embed_idx, pos_embed_idx, head_idx, sentence_len
 
     # @staticmethod
     def init_word_embeddings(self, word_dict):
@@ -203,16 +204,22 @@ class DepDataset(Dataset):
     def get_pos_vocab(self):
         return self.pos_idx_mappings, self.idx_pos_mappings
 
-    def convert_sentences_to_dataset(self, padding):
+    def convert_sentences_to_dataset(self, padding, is_train):
+        sentence_word_dropout_list = list()
         sentence_word_idx_list = list()
         sentence_pos_idx_list = list()
         sentence_head_idx_list = list()
         sentence_len_list = list()
         for sentence_idx, sentence in enumerate(self.datareader.sentences):
+            words_dropout_list = []
             words_idx_list = []
             pos_idx_list = []
             head_idx_list = []
             for word, pos, head in sentence:
+                dropout_prob = ALPHA_DROPOUT/(self.word_dict[word] + ALPHA_DROPOUT)
+                # print(f'dropout_prob: {dropout_prob}')
+                # print(f'count: {self.word_dict[word]}')
+                words_dropout_list.append(dropout_prob)
                 words_idx_list.append(self.word_idx_mappings.get(word))
                 pos_idx_list.append(self.pos_idx_mappings.get(pos))
                 head_idx_list.append(int(head))
@@ -223,6 +230,7 @@ class DepDataset(Dataset):
                     pos_idx_list.append(self.pos_idx_mappings.get(PAD_TOKEN))
                     head_idx_list.append(IGNORE_IDX)
 
+            sentence_word_dropout_list.append(torch.tensor(words_dropout_list, dtype=torch.float64, requires_grad=False))
             sentence_word_idx_list.append(torch.tensor(words_idx_list, dtype=torch.long, requires_grad=False))
             sentence_pos_idx_list.append(torch.tensor(pos_idx_list, dtype=torch.long, requires_grad=False))
             sentence_head_idx_list.append(torch.tensor(head_idx_list, dtype=torch.long, requires_grad=False))
@@ -233,13 +241,15 @@ class DepDataset(Dataset):
             # all_sentence_pos_idx = torch.tensor(sentence_pos_idx_list, dtype=torch.long)
             # all_sentence_head_idx = torch.tensor(sentence_head_idx_list, dtype=torch.long)
             # all_sentence_len = torch.tensor(sentence_len_list, dtype=torch.long, requires_grad=False)
+            all_sentence_word_dropout = torch.stack(sentence_word_dropout_list)
             all_sentence_word_idx = torch.stack(sentence_word_idx_list)
             all_sentence_pos_idx = torch.stack(sentence_pos_idx_list)
             all_sentence_head_idx = torch.stack(sentence_head_idx_list)
             all_sentence_len = torch.tensor(sentence_len_list, requires_grad=False)
-            return TensorDataset(all_sentence_word_idx, all_sentence_pos_idx, all_sentence_head_idx, all_sentence_len)
+            return TensorDataset(all_sentence_word_dropout, all_sentence_word_idx, all_sentence_pos_idx, all_sentence_head_idx, all_sentence_len)
 
-        return {i: sample_tuple for i, sample_tuple in enumerate(zip(sentence_word_idx_list,
+        return {i: sample_tuple for i, sample_tuple in enumerate(zip(sentence_word_dropout_list,
+                                                                     sentence_word_idx_list,
                                                                      sentence_pos_idx_list,
                                                                      sentence_head_idx_list,
                                                                      sentence_len_list))}
@@ -250,9 +260,9 @@ if __name__ == "__main__":
     path_test = "data_new/test.labeled"
     paths_list = [path_train, path_test]
     word_dict, pos_dict = get_vocabs_dep_parser(paths_list)
-    train = DepDataset(word_dict, pos_dict, 'data_new', 'train', padding=True)
+    train = DepDataset(word_dict, pos_dict, 'data_new', 'train', padding=False)
     train_dataloader = DataLoader(train, shuffle=True)
-    test = DepDataset(word_dict, pos_dict, 'data_new', 'test', padding=True)
+    test = DepDataset(word_dict, pos_dict, 'data_new', 'test', padding=False)
     test_dataloader = DataLoader(test, shuffle=False)
     print("Number of Train Tagged Sentences ", len(train))
     print("Number of Test Tagged Sentences ", len(test))

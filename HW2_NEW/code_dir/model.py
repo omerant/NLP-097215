@@ -46,7 +46,10 @@ class DnnSepParser(nn.Module):
         :param max_sentence_len: used to determine the output size of MLP
         """
         super(DnnSepParser, self).__init__()
-        self.hidden_dim = word_emb_dim + tag_emb_dim
+        # self.word_count = train_word_count_dict
+        self.word_emb_dim = word_emb_dim
+        self.tag_emb_dim = tag_emb_dim
+        self.hidden_dim = self.word_emb_dim + self.tag_emb_dim
         self.num_layers = num_layers
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.word_embedding = nn.Embedding(word_vocab_size, word_emb_dim)
@@ -56,7 +59,8 @@ class DnnSepParser(nn.Module):
         self.hidden2first_mlp = nn.Linear(self.hidden_dim * 2, max_sentence_len)
         self.tanh = torch.nn.Tanh()
         self.first_mlp2second_mlp = nn.Linear(max_sentence_len, max_sentence_len)
-        self.name = 'DnnDepParser' + '_' + str(self.hidden_dim) + '_' + str(self.num_layers)
+        self.name = 'DnnDepParser' + '_' + 'word_emb-' + str(self.word_emb_dim) + '_' + 'tag_emb-' + str(self.tag_emb_dim) \
+                    + '_' + 'num_stack' + str(self.num_layers)
 
     def forward(self, word_idx_tensor, tag_idx_tensor):
         # get embedding of input

@@ -97,7 +97,7 @@ class Trainer:
             for data in dl_train:
                 i += 1
                 # get the inputs
-                words_idx_tensor, pos_idx_tensor, dep_idx_tensor, sentence_length = data
+                word_dropout_prob, words_idx_tensor, pos_idx_tensor, dep_idx_tensor, sentence_length = data
                 dep_scores = self.model(words_idx_tensor, pos_idx_tensor)
                 dep_scores = dep_scores.unsqueeze(0).permute(0, 2, 1)
                 # print("tag_scores shape -", tag_scores.shape)
@@ -180,7 +180,7 @@ class Trainer:
         loss = 0
         with torch.no_grad():
             for batch_idx, input_data in enumerate(dataloader):
-                words_idx_tensor, pos_idx_tensor, dep_idx_tensor, sentence_length = input_data
+                word_dropout_prob, words_idx_tensor, pos_idx_tensor, dep_idx_tensor, sentence_length = input_data
                 dep_scores = model(words_idx_tensor, pos_idx_tensor)
                 dep_scores = dep_scores.unsqueeze(0).permute(0, 2, 1)
                 dep_scores_2d = dep_scores.squeeze(0)
