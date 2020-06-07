@@ -97,11 +97,12 @@ class Trainer:
             i = 0
             for data in dl_train:
                 i += 1
+                if i % 1000 == 0:
+                    print(i)
                 word_dropout_prob, words_idx_tensor, pos_idx_tensor, dep_idx_tensor, sentence_length = data
                 # insert dropout
                 bern_distribution = torch.distributions.bernoulli.Bernoulli(word_dropout_prob)
                 words_idx_tensor[bern_distribution.sample().bool()] = UNK_IDX
-
                 dep_scores = self.model(words_idx_tensor, pos_idx_tensor)
                 dep_scores = dep_scores.unsqueeze(0).permute(0, 2, 1)
                 # print("tag_scores shape -", tag_scores.shape)

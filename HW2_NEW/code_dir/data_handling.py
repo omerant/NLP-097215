@@ -134,6 +134,8 @@ class DepDataReader:
         with open(self.file, 'r') as f:
             cur_sentence=[]
             for line in f:
+                if line == '\n' and len(cur_sentence) == 0:
+                    break
                 if line == '\n':
                     self.sentences.append(cur_sentence)
                     cur_sentence = []

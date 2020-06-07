@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
+from itertools import product
 
 
 class DnnPosTagger(nn.Module):
@@ -59,6 +60,9 @@ class DnnSepParser(nn.Module):
         self.hidden2first_mlp = nn.Linear(self.hidden_dim * 2, max_sentence_len)
         self.tanh = torch.nn.Tanh()
         self.first_mlp2second_mlp = nn.Linear(max_sentence_len, max_sentence_len)
+        self.tmp1 = nn.Linear(self.hidden_dim * 4, 100)
+        self.tmp_tan = nn.Tanh()
+        self.tmp2 = nn.Linear(100, 1)
         self.name = 'DnnDepParser' + '_' + 'word_emb-' + str(self.word_emb_dim) + '_' + 'tag_emb-' + str(self.tag_emb_dim) \
                     + '_' + 'num_stack' + str(self.num_layers)
 
@@ -68,8 +72,11 @@ class DnnSepParser(nn.Module):
         tag_embeds = self.tag_embedding(tag_idx_tensor.to(self.device))  # [batch_size, seq_length, tag_emb_dim]
         concat_emb = torch.cat([word_embeds, tag_embeds], dim=2)  # [batch_size, seq_length, word_emb_dim+tag_emb_dim]
         lstm_out, _ = self.encoder(concat_emb.view(concat_emb.shape[1], 1, -1))  # [seq_length, batch_size, 2*hidden_dim]
-        first_mlp_out = self.hidden2first_mlp(lstm_out.view(concat_emb.shape[1], -1))  # [seq_length, tag_dim]
-        second_mlp_out = self.first_mlp2second_mlp(self.tanh(first_mlp_out))
-        dep_scores = F.log_softmax(second_mlp_out, dim=1)  # [seq_length, tag_dim]
-
-        return dep_scores
+        # first_mlp_out = self.hidden2first_mlp(lstm_out.view(concat_emb.shape[1], -1))  # [seq_length, tag_dim]
+        # second_mlp_out = self.first_mlp2second_mlp(self.tanh(first_mlp_out))
+        # dep_scores = F.log_softmax(second_mlp_out, dim=1)  # [seq_length, tag_dim]
+        sq = lstm_out.squeeze(dim=1) #[seq_length,2*hidden_dim]
+        pairs = torch.cat([torch.cat(pair).unsqueeze(0) for pair in product(sq,sq)]) #[seq_length**2,4*hidden_dim
+        scores = self.tmp2(self.tmp_tan(self.tmp1(pairs))).reshape(lstm_out.shape[0], lstm_out.shape[0]) #[seq_length,seq_length]
+        tmp_scores = F.log_softmax(scores, dim=1)
+        return tmp_scores

@@ -25,3 +25,13 @@ def plot_train(path):
 
 checkpoint_path = 'checkpoints/DnnDepParser_word_emb-100_tag_emb-25_num_stack3.pth'
 plot_train(checkpoint_path)
+# state = {
+#     'net': self.model.state_dict(),
+#     'epoch': epoch,
+#     'val_loss_list': val_loss_list,
+#     'val_acc_list': val_acc_list,
+#     'train_loss_list': train_loss_list,
+#     'train_acc_list': train_acc_list
+# }
+# print('saving model')
+# torch.save(state, 'checkpoints/' + self.model.name + '.pth')
