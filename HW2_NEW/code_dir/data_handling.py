@@ -223,7 +223,7 @@ class DepDataset(Dataset):
             pos_idx_list = []
             head_idx_list = []
             for word, pos, head in sentence:
-                dropout_prob = ALPHA_DROPOUT/(self.word_dict[word] + ALPHA_DROPOUT)
+                dropout_prob = 0#ALPHA_DROPOUT/(self.word_dict[word] + ALPHA_DROPOUT)
                 # print(f'dropout_prob: {dropout_prob}')
                 # print(f'count: {self.word_dict[word]}')
                 words_dropout_list.append(dropout_prob)

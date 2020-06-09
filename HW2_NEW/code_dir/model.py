@@ -85,7 +85,7 @@ class DnnSepParser(nn.Module):
         our_heads = None
         if calc_mst:
             with torch.no_grad():
-                dep_scores = tmp_scores.unsqueeze(0).permute(0, 2, 1)
+                dep_scores = scores.unsqueeze(0).permute(0, 2, 1)
                 dep_scores_2d = dep_scores.squeeze(0)
                 our_heads, _ = decode_mst(energy=dep_scores_2d.cpu().numpy(), length=tmp_scores.shape[0],
                                           has_labels=False)
