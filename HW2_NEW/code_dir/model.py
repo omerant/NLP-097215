@@ -2,6 +2,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 from itertools import product
+from chu_liu_edmonds import decode_mst
 
 
 class DnnPosTagger(nn.Module):
@@ -57,16 +58,16 @@ class DnnSepParser(nn.Module):
         self.tag_embedding = nn.Embedding(tag_vocab_size, tag_emb_dim)
         self.encoder = nn.LSTM(input_size=word_emb_dim + tag_emb_dim, hidden_size=self.hidden_dim, num_layers=num_layers,
                                bidirectional=True, batch_first=False)
-        self.hidden2first_mlp = nn.Linear(self.hidden_dim * 2, max_sentence_len)
-        self.tanh = torch.nn.Tanh()
-        self.first_mlp2second_mlp = nn.Linear(max_sentence_len, max_sentence_len)
+        # self.hidden2first_mlp = nn.Linear(self.hidden_dim * 2, max_sentence_len)
+        # self.tanh = torch.nn.Tanh()
+        # self.first_mlp2second_mlp = nn.Linear(max_sentence_len, max_sentence_len)
         self.tmp1 = nn.Linear(self.hidden_dim * 4, 100)
         self.tmp_tan = nn.Tanh()
         self.tmp2 = nn.Linear(100, 1)
         self.name = 'DnnDepParser' + '_' + 'word_emb-' + str(self.word_emb_dim) + '_' + 'tag_emb-' + str(self.tag_emb_dim) \
                     + '_' + 'num_stack' + str(self.num_layers)
 
-    def forward(self, word_idx_tensor, tag_idx_tensor):
+    def forward(self, word_idx_tensor, tag_idx_tensor, calc_mst=False):
         # get embedding of input
         word_embeds = self.word_embedding(word_idx_tensor.to(self.device))  # [batch_size, seq_length, word_emb_dim]
         tag_embeds = self.tag_embedding(tag_idx_tensor.to(self.device))  # [batch_size, seq_length, tag_emb_dim]
@@ -77,6 +78,16 @@ class DnnSepParser(nn.Module):
         # dep_scores = F.log_softmax(second_mlp_out, dim=1)  # [seq_length, tag_dim]
         sq = lstm_out.squeeze(dim=1) #[seq_length,2*hidden_dim]
         pairs = torch.cat([torch.cat(pair).unsqueeze(0) for pair in product(sq,sq)]) #[seq_length**2,4*hidden_dim
-        scores = self.tmp2(self.tmp_tan(self.tmp1(pairs))).reshape(lstm_out.shape[0], lstm_out.shape[0]) #[seq_length,seq_length]
+        scores = self.tmp2(self.tmp_tan(self.tmp1(pairs))).view(lstm_out.shape[0], lstm_out.shape[0]) #[seq_length,seq_length]
         tmp_scores = F.log_softmax(scores, dim=1)
-        return tmp_scores
+
+        # calc tree
+        our_heads = None
+        if calc_mst:
+            with torch.no_grad():
+                dep_scores = tmp_scores.unsqueeze(0).permute(0, 2, 1)
+                dep_scores_2d = dep_scores.squeeze(0)
+                our_heads, _ = decode_mst(energy=dep_scores_2d.cpu().numpy(), length=tmp_scores.shape[0],
+                                          has_labels=False)
+                # print(f'our heads: {our_heads}')
+        return tmp_scores, our_heads

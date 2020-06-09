@@ -103,7 +103,7 @@ class Trainer:
                 # insert dropout
                 bern_distribution = torch.distributions.bernoulli.Bernoulli(word_dropout_prob)
                 words_idx_tensor[bern_distribution.sample().bool()] = UNK_IDX
-                dep_scores = self.model(words_idx_tensor, pos_idx_tensor)
+                dep_scores, _ = self.model(words_idx_tensor, pos_idx_tensor)
                 dep_scores = dep_scores.unsqueeze(0).permute(0, 2, 1)
                 # print("tag_scores shape -", tag_scores.shape)
                 # print(f'tag_scores: {tag_scores}')
@@ -121,8 +121,9 @@ class Trainer:
             running_epoch_loss /= len_train
             train_loss_list.append(running_epoch_loss)
             # Calculate training/test set accuracy of the existing model
-            train_accuracy, _ = self.calculate_accuracy_dep_parser(self.model, dl_train, len_train, self.loss_fn,
-                                                                   self.device, acumulate_grad_steps)
+            # train_accuracy, _ = self.calculate_accuracy_dep_parser(self.model, dl_train, len_train, self.loss_fn,
+            #                                                        self.device, acumulate_grad_steps)
+            train_accuracy = 0.
             train_acc_list.append(train_accuracy)
             cur_epoch_val_accuracy, cur_epoch_val_loss = self.calculate_accuracy_dep_parser(self.model, dl_val,
                                                                                             len_test, self.loss_fn,
@@ -160,7 +161,7 @@ class Trainer:
                     'train_acc_list': train_acc_list
                 }
                 print('saving model')
-                torch.save(state, 'checkpoints/' + self.model.name +  '.pth')
+                torch.save(state, 'checkpoints/' + self.model.name + '.pth')
 
         print('==> Finished Training ...')
 
@@ -181,33 +182,26 @@ class Trainer:
 
     @staticmethod
     def calculate_accuracy_dep_parser(model, dataloader, len_data, loss_fn, device, acumulate_grad_steps):
-        acc = 0
-        loss = 0
+        acc_list = []
+        loss_list = []
+        non_skip_idx = 1
         with torch.no_grad():
+            # count = 0
             for batch_idx, input_data in enumerate(dataloader):
-                word_dropout_prob, words_idx_tensor, pos_idx_tensor, dep_idx_tensor, sentence_length = input_data
-                dep_scores = model(words_idx_tensor, pos_idx_tensor)
-                dep_scores = dep_scores.unsqueeze(0).permute(0, 2, 1)
-                dep_scores_2d = dep_scores.squeeze(0)
-                # print(f'dep_scores shape: {dep_scores.shape}')
-                our_heads, _ = decode_mst(energy=dep_scores_2d.cpu(), length=sentence_length, has_labels=False)
-                # _, indices = torch.max(dep_scores, 1)
-                # TODO: fix acc calculation according to UAS
-                dep_idx_tensor_2d = dep_idx_tensor.squeeze(0)
-                # print(f'dep_idx_tensor shape: {dep_idx_tensor.shape}')
-                # print(f'dep_idx_tensor: {dep_idx_tensor}')
-                # print(f'our_heads shape: {our_heads.shape}')
-                # print(f'our_heads: {our_heads}')
-                # print(f'type our_heads: {type(our_heads)}')
-                # print(f'dep_idx_tensor.numpy() == our_heads: {dep_idx_tensor.numpy() == our_heads}')
-                acc += np.mean(dep_idx_tensor_2d.numpy() == our_heads)
+                if batch_idx % non_skip_idx == 0:
+                    word_dropout_prob, words_idx_tensor, pos_idx_tensor, dep_idx_tensor, sentence_length = input_data
+                    dep_scores, our_heads = model(words_idx_tensor, pos_idx_tensor, calc_mst=True)
+                    assert our_heads is not None
+                    dep_scores = dep_scores.unsqueeze(0).permute(0, 2, 1)
+                    dep_idx_tensor_2d = dep_idx_tensor.squeeze(0)
+                    acc_list += [np.mean(dep_idx_tensor_2d.numpy() == our_heads)]
+                    cur_loss = loss_fn(dep_scores, dep_idx_tensor.to(device))
+                    loss_list.append(cur_loss.cpu().numpy())
 
-                loss += loss_fn(dep_scores, dep_idx_tensor.to(device))
-
-                # print(f'acc: {acc}')
-            acc = acc / len_data
+            acc = np.mean(acc_list)
             acc *= 100
-            loss = loss / (len_data*acumulate_grad_steps)
+            # print(f'acc list: P{acc_list}')
+            loss = np.mean(loss_list)
         return acc, loss
 
 
