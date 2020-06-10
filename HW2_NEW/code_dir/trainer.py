@@ -121,9 +121,9 @@ class Trainer:
             running_epoch_loss /= len_train
             train_loss_list.append(running_epoch_loss)
             # Calculate training/test set accuracy of the existing model
-            # train_accuracy, _ = self.calculate_accuracy_dep_parser(self.model, dl_train, len_train, self.loss_fn,
-            #                                                        self.device, acumulate_grad_steps)
-            train_accuracy = 0.
+            train_accuracy, _ = self.calculate_accuracy_dep_parser(self.model, dl_train, len_train, self.loss_fn,
+                                                                   self.device, acumulate_grad_steps)
+            # train_accuracy = 0.
             train_acc_list.append(train_accuracy)
             cur_epoch_val_accuracy, cur_epoch_val_loss = self.calculate_accuracy_dep_parser(self.model, dl_val,
                                                                                             len_test, self.loss_fn,

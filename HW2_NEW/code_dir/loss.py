@@ -15,7 +15,7 @@ class NllLoss(torch.nn.Module):
         :return:
         """
         Y_i_size = y_true.shape[1]
-        our_loss = -(1. / (Y_i_size * y_true.shape[0])) * torch.sum(log_prob_y_pred.gather(1, y_true.unsqueeze(1)))
+        our_loss = -(1. / (Y_i_size * y_true.shape[0])) * torch.sum(log_prob_y_pred[:,:,1:].gather(1, y_true.unsqueeze(1)[:,:,1:]))
         return our_loss
 
 

@@ -77,8 +77,10 @@ class DnnSepParser(nn.Module):
         # second_mlp_out = self.first_mlp2second_mlp(self.tanh(first_mlp_out))
         # dep_scores = F.log_softmax(second_mlp_out, dim=1)  # [seq_length, tag_dim]
         sq = lstm_out.squeeze(dim=1) #[seq_length,2*hidden_dim]
-        pairs = torch.cat([torch.cat(pair).unsqueeze(0) for pair in product(sq,sq)]) #[seq_length**2,4*hidden_dim
-        scores = self.tmp2(self.tmp_tan(self.tmp1(pairs))).view(lstm_out.shape[0], lstm_out.shape[0]) #[seq_length,seq_length]
+        pairs = [pair for pair in product(sq,sq)] #[seq_length**2,4*hidden_dim
+        pairs_cat = [torch.cat(pair).unsqueeze(0) for pair in pairs]
+        all_pairs = torch.cat(pairs_cat)
+        scores = self.tmp2(self.tmp_tan(self.tmp1(all_pairs))).view(lstm_out.shape[0], lstm_out.shape[0]) #[seq_length,seq_length]
         tmp_scores = F.log_softmax(scores, dim=1)
 
         # calc tree

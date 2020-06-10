@@ -6,7 +6,7 @@ from torch.utils.data.dataset import Dataset, TensorDataset
 from torch.utils.data.dataloader import DataLoader
 from pathlib import Path
 from collections import Counter
-from constants import PAD_TOKEN, SPECIAL_TOKENS, UNKNOWN_TOKEN, ROOT_TOKEN, ALPHA_DROPOUT
+from constants import PAD_TOKEN, SPECIAL_TOKENS, UNKNOWN_TOKEN, ROOT_TOKEN, ALPHA_DROPOUT, ROOT_POS
 import os.path as osp
 
 WORD_EMBED_SIZE = 100
@@ -132,13 +132,13 @@ class DepDataReader:
     def __readData__(self):
         """main reader function which also populates the class data structures"""
         with open(self.file, 'r') as f:
-            cur_sentence=[]
+            cur_sentence=[(ROOT_TOKEN, ROOT_POS, -1)]
             for line in f:
-                if line == '\n' and len(cur_sentence) == 0:
+                if line == '\n' and len(cur_sentence) == 1:
                     break
                 if line == '\n':
                     self.sentences.append(cur_sentence)
-                    cur_sentence = []
+                    cur_sentence = [(ROOT_TOKEN, ROOT_POS, -1)]
                     continue
                 splited_words = split(line, (' ', '\n', '\t'))
                 c_word = splited_words[WORD_IDX_IN_LINE]
