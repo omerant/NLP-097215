@@ -28,10 +28,7 @@ class DnnPosTagger(nn.Module):
     def forward(self, word_idx_tensor):
         # get embedding of input
         embeds = self.word_embedding(word_idx_tensor.to(self.device))  # [batch_size, seq_length, emb_dim]
-        # print(f'embeds shape: {embeds.shape}')
         lstm_out, _ = self.lstm(embeds.view(embeds.shape[1], 1, -1))
-        # print(f'lstm_out shape: {lstm_out.shape}')
-        # print(f'lstm_out.view(embeds.shape[1], -1) shape: {lstm_out.view(embeds.shape[1], -1).shape}')
         first_mlp_out = self.hidden2first_mlp(lstm_out.view(embeds.shape[1], -1))  # [seq_length, tag_dim]
         tag_scores = F.log_softmax(first_mlp_out, dim=1)  # [seq_length, tag_dim]
         return tag_scores
@@ -73,16 +70,19 @@ class DnnSepParser(nn.Module):
         tag_embeds = self.tag_embedding(tag_idx_tensor.to(self.device))  # [batch_size, seq_length, tag_emb_dim]
         concat_emb = torch.cat([word_embeds, tag_embeds], dim=2)  # [batch_size, seq_length, word_emb_dim+tag_emb_dim]
         lstm_out, _ = self.encoder(concat_emb.view(concat_emb.shape[1], 1, -1))  # [seq_length, batch_size, 2*hidden_dim]
-        # first_mlp_out = self.hidden2first_mlp(lstm_out.view(concat_emb.shape[1], -1))  # [seq_length, tag_dim]
-        # second_mlp_out = self.first_mlp2second_mlp(self.tanh(first_mlp_out))
-        # dep_scores = F.log_softmax(second_mlp_out, dim=1)  # [seq_length, tag_dim]
-        sq = lstm_out.squeeze(dim=1) #[seq_length,2*hidden_dim]
-        pairs = [pair for pair in product(sq,sq)] #[seq_length**2,4*hidden_dim
-        pairs_cat = [torch.cat(pair).unsqueeze(0) for pair in pairs]
-        all_pairs = torch.cat(pairs_cat)
-        scores = self.tmp2(self.tmp_tan(self.tmp1(all_pairs))).view(lstm_out.shape[0], lstm_out.shape[0]) #[seq_length,seq_length]
-        tmp_scores = F.log_softmax(scores, dim=1)
 
+        lstm_out_b_first = lstm_out.permute(1, 0, 2)
+        first_part_out = (lstm_out_b_first @ self.tmp1.weight.T[:lstm_out_b_first.shape[2], :] + self.tmp1.bias.T).squeeze(0)
+        second_part_out = (lstm_out_b_first @ self.tmp1.weight.T[lstm_out_b_first.shape[2]:, :] + self.tmp1.bias.T).squeeze(0)
+        first_part_out1 = first_part_out.unsqueeze(0)
+        second_part_out1 = second_part_out.unsqueeze(1)
+        first_part_out2 = first_part_out1.repeat(second_part_out.shape[0], 1, 1)
+        second_part_out2 = second_part_out1.repeat(1, first_part_out.shape[0], 1)
+        Z = first_part_out2 + second_part_out2
+        out_1 = Z.view(-1, Z.shape[-1])# [seq_length**2,hidden_dim_mlp]
+
+        scores = self.tmp2(self.tmp_tan(out_1)).view(lstm_out.shape[0], lstm_out.shape[0])
+        tmp_scores = F.log_softmax(scores, dim=1).squeeze(0)
         # calc tree
         our_heads = None
         if calc_mst:

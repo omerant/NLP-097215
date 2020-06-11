@@ -103,12 +103,10 @@ class Trainer:
                 # insert dropout
                 bern_distribution = torch.distributions.bernoulli.Bernoulli(word_dropout_prob)
                 words_idx_tensor[bern_distribution.sample().bool()] = UNK_IDX
+                # print(f'UNK_IDX: {UNK_IDX}')
+                # print(f'words_idx_tensor: {words_idx_tensor}')
                 dep_scores, _ = self.model(words_idx_tensor, pos_idx_tensor)
                 dep_scores = dep_scores.unsqueeze(0).permute(0, 2, 1)
-                # print("tag_scores shape -", tag_scores.shape)
-                # print(f'tag_scores: {tag_scores}')
-                # print("pos_idx_tensor shape -", pos_idx_tensor.shape)
-                # print(f'pos_idx_tensor: {pos_idx_tensor}')
                 loss = self.loss_fn(dep_scores, dep_idx_tensor.to(self.device))
                 loss = loss / acumulate_grad_steps
                 loss.backward()
@@ -118,12 +116,12 @@ class Trainer:
 
                 running_epoch_loss += loss.data.item()
             # Normalizing the loss by the total number of train batches
-            running_epoch_loss /= len_train
+            running_epoch_loss /= (len_train/acumulate_grad_steps)
             train_loss_list.append(running_epoch_loss)
             # Calculate training/test set accuracy of the existing model
-            train_accuracy, _ = self.calculate_accuracy_dep_parser(self.model, dl_train, len_train, self.loss_fn,
-                                                                   self.device, acumulate_grad_steps)
-            # train_accuracy = 0.
+            # train_accuracy, _ = self.calculate_accuracy_dep_parser(self.model, dl_train, len_train, self.loss_fn,
+            #                                                        self.device, acumulate_grad_steps)
+            train_accuracy = 0.
             train_acc_list.append(train_accuracy)
             cur_epoch_val_accuracy, cur_epoch_val_loss = self.calculate_accuracy_dep_parser(self.model, dl_val,
                                                                                             len_test, self.loss_fn,
