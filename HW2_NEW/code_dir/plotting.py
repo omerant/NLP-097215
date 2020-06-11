@@ -1,5 +1,6 @@
 import torch
 import matplotlib.pyplot as plt
+import os
 
 
 def plot_train(path):
@@ -23,15 +24,22 @@ def plot_train(path):
     pass
 
 
-checkpoint_path = 'checkpoints/DnnDepParser_word_emb-100_tag_emb-25_num_stack3.pth'
-plot_train(checkpoint_path)
-# state = {
-#     'net': self.model.state_dict(),
-#     'epoch': epoch,
-#     'val_loss_list': val_loss_list,
-#     'val_acc_list': val_acc_list,
-#     'train_loss_list': train_loss_list,
-#     'train_acc_list': train_acc_list
-# }
-# print('saving model')
-# torch.save(state, 'checkpoints/' + self.model.name + '.pth')
+def get_model_with_highest_val_acc(dir_path):
+    best_val_acc = 0
+    best_file = None
+    for file in os.listdir(dir_path):
+        path = os.path.join(dir_path, file)
+        train_info = torch.load(path, map_location=torch.device('cpu'))
+        val_acc_list = train_info['val_acc_list']
+        cur_best_val_acc = max(val_acc_list)
+        if cur_best_val_acc > best_val_acc:
+            best_val_acc = cur_best_val_acc
+            best_file = file
+    return best_file, best_val_acc
+
+
+checkpoint_path = 'checkpoints'
+best_model_file, best_val_acc = get_model_with_highest_val_acc(checkpoint_path)
+print(f'best validation accuracy: {best_val_acc}')
+model_param_path = os.path.join(checkpoint_path, best_model_file)
+plot_train(model_param_path)

@@ -58,7 +58,7 @@ class Trainer:
             log += "Epoch Time: {:.2f} secs".format(epoch_time)
             print(log)
 
-            if len(val_acc_list) > 1 and cur_epoch_val_accuracy < val_acc_list[-2]:
+            if len(va) > 1 and cur_epoch_val_accuracy < val_acc_list[-2]:
                 epochs_without_improvement += 1
             else:
                 epochs_without_improvement = 0
@@ -89,7 +89,7 @@ class Trainer:
         train_loss_list = []
         val_acc_list = []
         val_loss_list = []
-        best_val_acc = 0.
+        best_val_loss = np.inf
         for epoch in range(1, num_epochs + 1):
             self.model.train()  # put in training mode
             running_epoch_loss = 0.0
@@ -147,16 +147,17 @@ class Trainer:
             log += "Epoch Time: {:.2f} secs".format(epoch_time)
             print(log)
 
-            if len(val_acc_list) > 1 and cur_epoch_val_accuracy < val_acc_list[-2]:
+            if len(val_loss_list) > 1 and cur_epoch_val_loss > best_val_loss:
                 epochs_without_improvement += 1
             else:
                 epochs_without_improvement = 0
 
             if early_stopping is not None and epochs_without_improvement == early_stopping:
+                print(f'early stopping reached, stop training')
                 break
 
-            if cur_epoch_val_accuracy > best_val_acc:
-                best_val_acc = cur_epoch_val_accuracy
+            if cur_epoch_val_loss < best_val_loss:
+                best_val_loss = cur_epoch_val_loss
                 if not os.path.isdir('checkpoints'):
                     os.mkdir('checkpoints')
                 # save model
