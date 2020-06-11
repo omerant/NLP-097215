@@ -81,8 +81,8 @@ class DnnSepParser(nn.Module):
         Z = first_part_out2 + second_part_out2
         out_1 = Z.view(-1, Z.shape[-1])# [seq_length**2,hidden_dim_mlp]
 
-        scores = self.tmp2(self.tmp_tan(out_1)).view(lstm_out.shape[0], lstm_out.shape[0])
-        tmp_scores = F.log_softmax(scores, dim=1).squeeze(0)
+        scores = self.tmp2(self.tmp_tan(out_1)).view(lstm_out.shape[0], lstm_out.shape[0]).squeeze(0)
+        tmp_scores = F.log_softmax(scores, dim=1)
         # calc tree
         our_heads = None
         if calc_mst:
