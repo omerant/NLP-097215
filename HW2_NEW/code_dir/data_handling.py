@@ -168,7 +168,7 @@ class DepDataset(Dataset):
             self.word_idx_mappings, self.idx_word_mappings, self.word_vectors = self.init_word_idx_mapping(
                 self.datareader.word_dict)
         self.pos_idx_mappings, self.idx_pos_mappings = self.init_pos_vocab(self.datareader.pos_dict)
-
+        self.idx_pos_mappings = {v: k for k, v in self.pos_idx_mappings.items()}
         self.pad_idx = self.word_idx_mappings.get(PAD_TOKEN)
         self.unknown_idx = self.word_idx_mappings.get(UNKNOWN_TOKEN)
         self.word_vector_dim = self.word_vectors.size(-1)

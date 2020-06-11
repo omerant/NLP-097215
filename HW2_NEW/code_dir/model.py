@@ -1,7 +1,6 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
-from itertools import product
 from chu_liu_edmonds import decode_mst
 
 
@@ -59,6 +58,10 @@ class DnnSepParser(nn.Module):
         self.fc2 = nn.Linear(100, 1)
         self.name = 'DnnDepParser' + '_' + 'word_emb-' + str(self.word_emb_dim) + '_' + 'tag_emb-' + str(self.tag_emb_dim) \
                     + '_' + 'num_stack' + str(self.num_layers)
+
+    def load_embedding(self, word_embeddings, pos_embeddings):
+        self.word_embedding = word_embeddings
+        self.tag_embedding = pos_embeddings
 
     def forward(self, word_idx_tensor, tag_idx_tensor, calc_mst=False):
         # get embedding of input

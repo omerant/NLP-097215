@@ -27,7 +27,8 @@ def plot_train(path):
 def get_model_with_highest_val_acc(dir_path):
     best_val_acc = 0
     best_file = None
-    for file in os.listdir(dir_path):
+    for file in sorted(os.listdir(dir_path)):
+        print(file)
         path = os.path.join(dir_path, file)
         train_info = torch.load(path, map_location=torch.device('cpu'))
         val_acc_list = train_info['val_acc_list']
