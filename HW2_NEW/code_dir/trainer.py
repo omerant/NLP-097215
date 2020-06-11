@@ -93,6 +93,7 @@ class Trainer:
         for epoch in range(1, num_epochs + 1):
             self.model.train()  # put in training mode
             running_epoch_loss = 0.0
+            running_epoch_acc = []
             epoch_time = time.time()
             i = 0
             for data in dl_train:
@@ -105,8 +106,18 @@ class Trainer:
                 words_idx_tensor[bern_distribution.sample().bool()] = UNK_IDX
                 # print(f'UNK_IDX: {UNK_IDX}')
                 # print(f'words_idx_tensor: {words_idx_tensor}')
-                dep_scores, _ = self.model(words_idx_tensor, pos_idx_tensor)
+                dep_scores, our_heads = self.model(words_idx_tensor, pos_idx_tensor, True)
                 dep_scores = dep_scores.unsqueeze(0).permute(0, 2, 1)
+
+                dep_idx_tensor_2d = dep_idx_tensor.squeeze(0)
+                running_epoch_acc += [np.mean(dep_idx_tensor_2d.numpy()[1:] == our_heads[1:])]
+                # cur_loss = loss_fn(dep_scores, dep_idx_tensor.to(device))
+
+
+
+                # dep_idx_tensor_2d = dep_idx_tensor.squeeze(0)
+                # running_epoch_acc += [np.mean(dep_idx_tensor_2d.numpy()[1:] == our_heads[1:])]
+
                 loss = self.loss_fn(dep_scores, dep_idx_tensor.to(self.device))
                 loss = loss / acumulate_grad_steps
                 loss.backward()
@@ -118,19 +129,18 @@ class Trainer:
             # Normalizing the loss by the total number of train batches
             running_epoch_loss /= (len_train/acumulate_grad_steps)
             train_loss_list.append(running_epoch_loss)
-            # Calculate training/test set accuracy of the existing model
-            # train_accuracy, _ = self.calculate_accuracy_dep_parser(self.model, dl_train, len_train, self.loss_fn,
-            #                                                        self.device, acumulate_grad_steps)
-            train_accuracy = 0.
-            train_acc_list.append(train_accuracy)
+            # print(f'running_epoch_acc: {running_epoch_acc}')
+            cur_epoch_train_accuracy = np.mean(running_epoch_acc) * 100
+            train_acc_list.append(cur_epoch_train_accuracy)
             cur_epoch_val_accuracy, cur_epoch_val_loss = self.calculate_accuracy_dep_parser(self.model, dl_val,
                                                                                             len_test, self.loss_fn,
                                                                                             self.device, acumulate_grad_steps)
+
             val_loss_list.append(cur_epoch_val_loss)
             val_acc_list.append(cur_epoch_val_accuracy)
             log = "Epoch: {} | Training Loss: {:.4f} | Training accuracy: {:.3f}% | Test Loss: {:.4f} | Test accuracy: {:.3f}% | ".format(epoch,
                                                                                                              running_epoch_loss,
-                                                                                                             train_accuracy,
+                                                                                                             cur_epoch_train_accuracy,
                                                                                                              cur_epoch_val_loss,
                                                                                                              cur_epoch_val_accuracy)
             epoch_time = time.time() - epoch_time
@@ -159,7 +169,8 @@ class Trainer:
                     'train_acc_list': train_acc_list
                 }
                 print('saving model')
-                torch.save(state, 'checkpoints/' + self.model.name + '.pth')
+                # insert more parameters to save
+                torch.save(state, 'checkpoints/' + self.model.name + '_' + str(acumulate_grad_steps) + '.pth')
 
         print('==> Finished Training ...')
 
@@ -188,18 +199,21 @@ class Trainer:
             for batch_idx, input_data in enumerate(dataloader):
                 if batch_idx % non_skip_idx == 0:
                     word_dropout_prob, words_idx_tensor, pos_idx_tensor, dep_idx_tensor, sentence_length = input_data
+
+                    # print(f'UNK_IDX: {UNK_IDX}')
+                    # print(f'words_idx_tensor: {words_idx_tensor}')
                     dep_scores, our_heads = model(words_idx_tensor, pos_idx_tensor, calc_mst=True)
                     assert our_heads is not None
                     dep_scores = dep_scores.unsqueeze(0).permute(0, 2, 1)
                     dep_idx_tensor_2d = dep_idx_tensor.squeeze(0)
-                    acc_list += [np.mean(dep_idx_tensor_2d.numpy() == our_heads)]
+                    acc_list += [np.mean(dep_idx_tensor_2d.numpy()[1:] == our_heads[1:])]
                     cur_loss = loss_fn(dep_scores, dep_idx_tensor.to(device))
-                    loss_list.append(cur_loss.cpu().numpy())
+                    loss_list.append(cur_loss.cpu().numpy()/acumulate_grad_steps)
 
             acc = np.mean(acc_list)
             acc *= 100
             # print(f'acc list: P{acc_list}')
-            loss = np.mean(loss_list)
+            loss = np.mean(loss_list) * acumulate_grad_steps
         return acc, loss
 
 

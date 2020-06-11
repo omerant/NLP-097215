@@ -1,7 +1,7 @@
 from collections import defaultdict
 import torch
 from utils import split, get_vocabs, get_vocabs_dep_parser, WORD_IDX_IN_LINE, POS_IDX_IN_LINE, HEAD_IDX_IN_LINE, IGNORE_IDX
-from torchtext.vocab import Vocab
+# from torchtext.vocab import Vocab
 from torch.utils.data.dataset import Dataset, TensorDataset
 from torch.utils.data.dataloader import DataLoader
 from pathlib import Path
@@ -223,7 +223,7 @@ class DepDataset(Dataset):
             pos_idx_list = []
             head_idx_list = []
             for word, pos, head in sentence:
-                dropout_prob = 0#ALPHA_DROPOUT/(self.word_dict[word] + ALPHA_DROPOUT)
+                dropout_prob = ALPHA_DROPOUT/(self.word_dict[word] + ALPHA_DROPOUT) if word != ROOT_TOKEN else 0
                 # print(f'dropout_prob: {dropout_prob}')
                 # print(f'count: {self.word_dict[word]}')
                 words_dropout_list.append(dropout_prob)
