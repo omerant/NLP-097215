@@ -61,4 +61,6 @@ def _gen_comp_files_model1(word_vocab_size, tag_vocab_size, test_dataloader, tes
     #TODO: complete
     pass
 
-gen_comp_files()
+
+if __name__ == '__main__':
+    gen_comp_files()
