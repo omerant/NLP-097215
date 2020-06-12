@@ -85,7 +85,7 @@ class Trainer:
         print('==> Finished Training ...')
 
     def train_dep_parser(self, num_epochs: int, dl_train: DataLoader, dl_val: DataLoader, acumulate_grad_steps: int,
-                         len_train: int, len_test: int, early_stopping: bool = None):
+                         len_train: int, len_test: int, early_stopping: int = None):
         epochs_without_improvement = 0
         train_acc_list = []
         train_loss_list = []
@@ -119,8 +119,10 @@ class Trainer:
 
                 # dep_idx_tensor_2d = dep_idx_tensor.squeeze(0)
                 # running_epoch_acc += [np.mean(dep_idx_tensor_2d.numpy()[1:] == our_heads[1:])]
+                # print(f'dep_scores.shape: {dep_scores.shape}')
+                # print(f'dep_idx_tensor.shape: {dep_idx_tensor.shape}')
+                loss = self.loss_fn(dep_scores[:, :, 1:], dep_idx_tensor.to(self.device)[:, 1:])
 
-                loss = self.loss_fn(dep_scores, dep_idx_tensor.to(self.device))
                 loss = loss / acumulate_grad_steps
                 loss.backward()
                 if i % acumulate_grad_steps == 0:
@@ -212,7 +214,8 @@ class Trainer:
                     dep_scores = dep_scores.unsqueeze(0).permute(0, 2, 1)
                     dep_idx_tensor_2d = dep_idx_tensor.squeeze(0)
                     acc_list += [np.mean(dep_idx_tensor_2d.numpy()[1:] == our_heads[1:])]
-                    cur_loss = loss_fn(dep_scores, dep_idx_tensor.to(device))
+                    #
+                    cur_loss = loss_fn(dep_scores[:, :, 1:], dep_idx_tensor.to(device)[:, 1:])
                     loss_list.append(cur_loss.cpu().numpy()/acumulate_grad_steps)
 
             acc = np.mean(acc_list)
@@ -223,7 +226,6 @@ class Trainer:
 
     @staticmethod
     def calculate_comp(model, comp_dataloader, idx_word_mappings, idx_pos_mappings, output_path):
-        sentence_list = []
         with torch.no_grad():
             with open(output_path, 'w') as out_file:
                 # count = 0

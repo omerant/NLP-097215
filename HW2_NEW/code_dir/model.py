@@ -34,7 +34,7 @@ class DnnPosTagger(nn.Module):
 
 
 class DnnSepParser(nn.Module):
-    def __init__(self, word_emb_dim, tag_emb_dim, num_layers, word_vocab_size, tag_vocab_size):
+    def __init__(self, word_emb_dim, tag_emb_dim, num_layers, word_vocab_size, tag_vocab_size, hidden_fc_dim):
         """
         :param word_emb_dim: dimension of word embedding
         :param tag_emb_dim: dimension of tag embedding
@@ -53,9 +53,9 @@ class DnnSepParser(nn.Module):
         self.encoder = nn.LSTM(input_size=word_emb_dim + tag_emb_dim, hidden_size=self.hidden_dim_lstm, num_layers=num_layers,
                                bidirectional=True, batch_first=False)
 
-        self.fc1 = nn.Linear(self.hidden_dim_lstm * 4, 100)
+        self.fc1 = nn.Linear(self.hidden_dim_lstm * 4, hidden_fc_dim)
         self.tan = nn.Tanh()
-        self.fc2 = nn.Linear(100, 1)
+        self.fc2 = nn.Linear(hidden_fc_dim, 1)
         self.name = 'DnnDepParser' + '_' + 'word_emb-' + str(self.word_emb_dim) + '_' + 'tag_emb-' + str(self.tag_emb_dim) \
                     + '_' + 'num_stack' + str(self.num_layers)
 
@@ -78,7 +78,7 @@ class DnnSepParser(nn.Module):
         first_part_out2 = first_part_out1.repeat(second_part_out.shape[0], 1, 1)
         second_part_out2 = second_part_out1.repeat(1, first_part_out.shape[0], 1)
         Z = first_part_out2 + second_part_out2
-        out_1 = Z.view(-1, Z.shape[-1])# [seq_length**2,hidden_dim_mlp]
+        out_1 = Z.view(-1, Z.shape[-1])  # [seq_length**2,hidden_dim_mlp]
 
         scores = self.fc2(self.tan(out_1)).view(lstm_out.shape[0], lstm_out.shape[0]).squeeze(0)
         tmp_scores = F.log_softmax(scores, dim=1)
