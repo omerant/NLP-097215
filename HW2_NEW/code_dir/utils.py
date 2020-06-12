@@ -72,6 +72,6 @@ def get_vocabs(list_of_paths):
 
 
 def constract_line(idx, word, tag, head):
-    line = str(idx) + '\t' + word + '\t' + '_' + '\t' + tag + '\t' + '_' + '\t' + '_' + '\t' + str(head) + \
+    line = str(idx) + '\t' + word + '\t' + '_' + '\t' + tag + '\t' + '_' + '\t' + '_' + '\t' + str(head) + '\t' + \
            '_' + '\t' + '_' + '\t' + '_' + '\t'
     return line

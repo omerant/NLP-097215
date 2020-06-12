@@ -128,11 +128,12 @@ class DepDataReader:
         self.train_word_dict = train_word_dict
         self.sentences = []
         self.__readData__()
+        pass
 
     def __readData__(self):
         """main reader function which also populates the class data structures"""
         with open(self.file, 'r') as f:
-            cur_sentence=[(ROOT_TOKEN, ROOT_POS, -1)]
+            cur_sentence = [(ROOT_TOKEN, ROOT_POS, -1)]
             for line in f:
                 if line == '\n' and len(cur_sentence) == 1:
                     break
@@ -154,13 +155,13 @@ class DepDataReader:
 
 
 class DepDataset(Dataset):
-    def __init__(self, word_dict, pos_dict, dir_path: str, subset: str,
-                 padding=False, word_embeddings=None, train_word_dict=None):
+    def __init__(self, word_dict, pos_dict, dir_path: str, file: str,
+                 padding=False, word_embeddings=None, train_word_dict=None, is_comp=False):
         super().__init__()
         self.word_dict = word_dict
-        self.subset = subset  # One of the following: [train, test]
-        self.file = osp.join(dir_path, subset + ".labeled")
+        self.file = osp.join(dir_path, file)
         self.datareader = DepDataReader(self.file, word_dict, pos_dict, train_word_dict)
+        # if train_word_dict is None: # we are filling
         self.vocab_size = len(self.datareader.word_dict)
         if word_embeddings:
             self.word_idx_mappings, self.idx_word_mappings, self.word_vectors = word_embeddings
@@ -174,7 +175,7 @@ class DepDataset(Dataset):
         self.word_vector_dim = self.word_vectors.size(-1)
         self.sentence_lens = [len(sentence) for sentence in self.datareader.sentences]
         self.max_seq_len = max(self.sentence_lens)
-        self.sentences_dataset = self.convert_sentences_to_dataset(padding)
+        self.sentences_dataset = self.convert_sentences_to_dataset(padding, is_comp)
 
     def __len__(self):
         return len(self.sentences_dataset)
@@ -211,7 +212,7 @@ class DepDataset(Dataset):
     def get_pos_vocab(self):
         return self.pos_idx_mappings, self.idx_pos_mappings
 
-    def convert_sentences_to_dataset(self, padding):
+    def convert_sentences_to_dataset(self, padding, is_comp):
         sentence_word_dropout_list = list()
         sentence_word_idx_list = list()
         sentence_pos_idx_list = list()
@@ -229,7 +230,10 @@ class DepDataset(Dataset):
                 words_dropout_list.append(dropout_prob)
                 words_idx_list.append(self.word_idx_mappings.get(word))
                 pos_idx_list.append(self.pos_idx_mappings.get(pos))
-                head_idx_list.append(int(head))
+                if not is_comp:
+                    head_idx_list.append(int(head))
+                else:
+                    head_idx_list.append(0)
             sentence_len = len(words_idx_list)
             if padding:
                 while len(words_idx_list) < self.max_seq_len:
