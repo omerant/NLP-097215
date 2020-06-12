@@ -199,6 +199,7 @@ class Trainer:
     @staticmethod
     def calculate_accuracy_dep_parser(model, dataloader, len_data, loss_fn, device, acumulate_grad_steps):
         acc_list = []
+        unknow_acc_list = []
         loss_list = []
         non_skip_idx = 1
         with torch.no_grad():
@@ -209,18 +210,33 @@ class Trainer:
 
                     # print(f'UNK_IDX: {UNK_IDX}')
                     # print(f'words_idx_tensor: {words_idx_tensor}')
+                    # print(f'words_idx_tensor.shape: {words_idx_tensor.shape}')
                     dep_scores, our_heads = model(words_idx_tensor, pos_idx_tensor, calc_mst=True)
                     assert our_heads is not None
                     dep_scores = dep_scores.unsqueeze(0).permute(0, 2, 1)
                     dep_idx_tensor_2d = dep_idx_tensor.squeeze(0)
+                    # print(f'unknown indexes, words_idx_tensor.squeeze(0)[1:] == UNK_IDX: {words_idx_tensor.squeeze(0)[1:] == UNK_IDX}')
                     acc_list += [np.mean(dep_idx_tensor_2d.numpy()[1:] == our_heads[1:])]
+                    unk_idx_arr = words_idx_tensor.squeeze(0)[1:] == UNK_IDX
+                    if sum(unk_idx_arr) > 0:
+                        # print(f'dep_idx_tensor_2d.numpy()[1:][unk_idx_arr]: {dep_idx_tensor_2d.numpy()[1:][unk_idx_arr]}')
+                        # print(f'our_heads[1:][unk_idx_arr]): {our_heads[1:][unk_idx_arr]}')
+                        unknow_acc_list += [np.mean(dep_idx_tensor_2d.numpy()[1:][unk_idx_arr] == our_heads[1:][unk_idx_arr])]
+                        # print(f'unk_idx_arr.shape[0]: {unk_idx_arr.shape[0]}')
+                        # print(dep_idx_tensor_2d.numpy()[1:][unk_idx_arr])
+
                     #
+
+                    # print(f'dep_idx_tensor_2d.shape: {dep_idx_tensor_2d}')
+                    # print(f'our_heads.shape: {our_heads.shape}')
                     cur_loss = loss_fn(dep_scores[:, :, 1:], dep_idx_tensor.to(device)[:, 1:])
                     loss_list.append(cur_loss.cpu().numpy()/acumulate_grad_steps)
 
             acc = np.mean(acc_list)
             acc *= 100
             # print(f'acc list: P{acc_list}')
+            unknown_acc = np.mean(unknow_acc_list) * 100
+            print(f'unknown accuracy: {unknown_acc}')
             loss = np.mean(loss_list) * acumulate_grad_steps
         return acc, loss
 

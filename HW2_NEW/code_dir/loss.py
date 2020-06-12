@@ -33,7 +33,7 @@ if __name__ == '__main__':
     my_loss = loss_fn(log_prob_y_pred_out[:, :, 1:], y_true_out[:, 1:])
     print(my_loss)
     # tensor(0.5718)
-    loss_fn = torch.nn.NLLLoss()
+    loss_fn = NLLLoss()
     lib_loss = loss_fn(log_prob_y_pred_out[:, :, 1:], y_true_out[:, 1:])#loss_fn(log_prob_y_pred_out, y_true_out)
     print(lib_loss)
     assert lib_loss == my_loss
