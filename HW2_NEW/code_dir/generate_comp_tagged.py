@@ -57,4 +57,8 @@ def _gen_comp_files_model1(word_vocab_size, tag_vocab_size, test_dataloader, tes
                    idx_pos_mappings=test_dataset.idx_pos_mappings, output_path='beza')
 
 
+def _gen_comp_files_model1(word_vocab_size, tag_vocab_size, test_dataloader, test_dataset):
+    #TODO: complete
+    pass
+
 gen_comp_files()
