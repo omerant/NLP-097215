@@ -108,21 +108,19 @@ class Trainer:
                 words_idx_tensor[bern_distribution.sample().bool()] = UNK_IDX
                 # print(f'UNK_IDX: {UNK_IDX}')
                 # print(f'words_idx_tensor: {words_idx_tensor}')
-                dep_scores, our_heads = self.model(words_idx_tensor, pos_idx_tensor, True)
+                dep_scores, our_heads, scores = self.model(words_idx_tensor, pos_idx_tensor, True)
                 dep_scores = dep_scores.unsqueeze(0).permute(0, 2, 1)
 
                 dep_idx_tensor_2d = dep_idx_tensor.squeeze(0)
                 running_epoch_acc += [np.mean(dep_idx_tensor_2d.numpy()[1:] == our_heads[1:])]
-                # cur_loss = loss_fn(dep_scores, dep_idx_tensor.to(device))
 
-
-
-                # dep_idx_tensor_2d = dep_idx_tensor.squeeze(0)
-                # running_epoch_acc += [np.mean(dep_idx_tensor_2d.numpy()[1:] == our_heads[1:])]
-                # print(f'dep_scores.shape: {dep_scores.shape}')
-                # print(f'dep_idx_tensor.shape: {dep_idx_tensor.shape}')
+                # CALC LOSS ON SCORES
+                # scores = scores.unsqueeze(0).permute(0, 2, 1)
+                # loss = self.loss_fn(scores[:, :, 1:], dep_idx_tensor.to(self.device)[:, 1:])
+                # print(f'loss.device: {loss.device}')
+                # END CALC LOSS ON SCORES
+                # print(f'dep_idx_tensor.to(self.device)[:, 1:]: {dep_idx_tensor.to(self.device)[:, 1:]}')
                 loss = self.loss_fn(dep_scores[:, :, 1:], dep_idx_tensor.to(self.device)[:, 1:])
-
                 loss = loss / acumulate_grad_steps
                 loss.backward()
                 if i % acumulate_grad_steps == 0:
@@ -208,29 +206,28 @@ class Trainer:
                 if batch_idx % non_skip_idx == 0:
                     word_dropout_prob, words_idx_tensor, pos_idx_tensor, dep_idx_tensor, sentence_length = input_data
 
-                    # print(f'UNK_IDX: {UNK_IDX}')
-                    # print(f'words_idx_tensor: {words_idx_tensor}')
-                    # print(f'words_idx_tensor.shape: {words_idx_tensor.shape}')
-                    dep_scores, our_heads = model(words_idx_tensor, pos_idx_tensor, calc_mst=True)
+                    dep_scores, our_heads, scores = model(words_idx_tensor, pos_idx_tensor, calc_mst=True)
                     assert our_heads is not None
                     dep_scores = dep_scores.unsqueeze(0).permute(0, 2, 1)
                     dep_idx_tensor_2d = dep_idx_tensor.squeeze(0)
-                    # print(f'unknown indexes, words_idx_tensor.squeeze(0)[1:] == UNK_IDX: {words_idx_tensor.squeeze(0)[1:] == UNK_IDX}')
                     acc_list += [np.mean(dep_idx_tensor_2d.numpy()[1:] == our_heads[1:])]
                     unk_idx_arr = words_idx_tensor.squeeze(0)[1:] == UNK_IDX
                     if sum(unk_idx_arr) > 0:
-                        # print(f'dep_idx_tensor_2d.numpy()[1:][unk_idx_arr]: {dep_idx_tensor_2d.numpy()[1:][unk_idx_arr]}')
-                        # print(f'our_heads[1:][unk_idx_arr]): {our_heads[1:][unk_idx_arr]}')
+
                         unknow_acc_list += [np.mean(dep_idx_tensor_2d.numpy()[1:][unk_idx_arr] == our_heads[1:][unk_idx_arr])]
-                        # print(f'unk_idx_arr.shape[0]: {unk_idx_arr.shape[0]}')
-                        # print(dep_idx_tensor_2d.numpy()[1:][unk_idx_arr])
 
-                    #
+                    # CALC LOSS ON SCORES
+                    # scores = scores.unsqueeze(0).permute(0, 2, 1)
+                    # cur_loss = loss_fn(scores[:, :, 1:], dep_idx_tensor.to(device)[:, 1:])
+                    # END CALC LOSS ON SCORES
 
-                    # print(f'dep_idx_tensor_2d.shape: {dep_idx_tensor_2d}')
-                    # print(f'our_heads.shape: {our_heads.shape}')
-                    cur_loss = loss_fn(dep_scores[:, :, 1:], dep_idx_tensor.to(device)[:, 1:])
-                    loss_list.append(cur_loss.cpu().numpy()/acumulate_grad_steps)
+                    loss = loss_fn(dep_scores[:, :, 1:], dep_idx_tensor.to(device)[:, 1:])
+
+
+
+
+
+                    loss_list.append(loss.cpu().numpy()/acumulate_grad_steps)
 
             acc = np.mean(acc_list)
             acc *= 100
