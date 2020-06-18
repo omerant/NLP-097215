@@ -88,7 +88,8 @@ class DnnSepParser(nn.Module):
             with torch.no_grad():
                 dep_scores = scores.unsqueeze(0).permute(0, 2, 1)
                 dep_scores_2d = dep_scores.squeeze(0)
+                # TODO: add zeros on diagonal
                 our_heads, _ = decode_mst(energy=dep_scores_2d.cpu().numpy(), length=tmp_scores.shape[0],
                                           has_labels=False)
                 # print(f'our heads: {our_heads}')
-        return tmp_scores, our_heads
+        return tmp_scores, our_heads, scores
