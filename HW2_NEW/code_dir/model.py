@@ -92,4 +92,7 @@ class DnnSepParser(nn.Module):
                 our_heads, _ = decode_mst(energy=dep_scores_2d.cpu().numpy(), length=tmp_scores.shape[0],
                                           has_labels=False)
                 # print(f'our heads: {our_heads}')
+        # print(f'tmp_scores.device: {tmp_scores.device}')
+        # print(f'our_heads type: {type(our_heads)}')
+        # print(f'scores.device: {scores.device}')
         return tmp_scores, our_heads, scores

@@ -39,8 +39,9 @@ def get_model_with_highest_val_acc(dir_path):
     return best_file, best_val_acc
 
 
-checkpoint_path = 'checkpoints'
+checkpoint_path = 'checkpoints/first_model'
 best_model_file, best_val_acc = get_model_with_highest_val_acc(checkpoint_path)
 print(f'best validation accuracy: {best_val_acc}')
+print(f'best_model_file: {best_model_file}')
 model_param_path = os.path.join(checkpoint_path, best_model_file)
 plot_train(model_param_path)

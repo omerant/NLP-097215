@@ -115,12 +115,18 @@ class Trainer:
                 running_epoch_acc += [np.mean(dep_idx_tensor_2d.numpy()[1:] == our_heads[1:])]
 
                 # CALC LOSS ON SCORES
-                # scores = scores.unsqueeze(0).permute(0, 2, 1)
-                # loss = self.loss_fn(scores[:, :, 1:], dep_idx_tensor.to(self.device)[:, 1:])
-                # print(f'loss.device: {loss.device}')
+                scores = scores.unsqueeze(0).permute(0, 2, 1)
+                loss = self.loss_fn(scores[:, :, 1:], dep_idx_tensor.to(self.device)[:, 1:])
+
                 # END CALC LOSS ON SCORES
                 # print(f'dep_idx_tensor.to(self.device)[:, 1:]: {dep_idx_tensor.to(self.device)[:, 1:]}')
-                loss = self.loss_fn(dep_scores[:, :, 1:], dep_idx_tensor.to(self.device)[:, 1:])
+
+
+
+
+                # loss = self.loss_fn(dep_scores[:, :, 1:], dep_idx_tensor.to(self.device)[:, 1:])
+                #
+
                 loss = loss / acumulate_grad_steps
                 loss.backward()
                 if i % acumulate_grad_steps == 0:
@@ -217,11 +223,11 @@ class Trainer:
                         unknow_acc_list += [np.mean(dep_idx_tensor_2d.numpy()[1:][unk_idx_arr] == our_heads[1:][unk_idx_arr])]
 
                     # CALC LOSS ON SCORES
-                    # scores = scores.unsqueeze(0).permute(0, 2, 1)
-                    # cur_loss = loss_fn(scores[:, :, 1:], dep_idx_tensor.to(device)[:, 1:])
+                    scores = scores.unsqueeze(0).permute(0, 2, 1)
+                    loss = loss_fn(scores[:, :, 1:], dep_idx_tensor.to(device)[:, 1:])
                     # END CALC LOSS ON SCORES
 
-                    loss = loss_fn(dep_scores[:, :, 1:], dep_idx_tensor.to(device)[:, 1:])
+                    # loss = loss_fn(dep_scores[:, :, 1:], dep_idx_tensor.to(device)[:, 1:])
 
 
 
