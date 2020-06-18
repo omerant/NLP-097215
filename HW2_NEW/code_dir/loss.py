@@ -15,6 +15,7 @@ class NllLoss(torch.nn.Module):
         :param y_pred:
         :return:
         """
+
         Y_i_size = y_true.shape[1]
         our_loss = -(1. / (Y_i_size * y_true.shape[0])) * torch.sum(log_prob_y_pred.gather(1, y_true.unsqueeze(1)))
         return our_loss
@@ -32,15 +33,17 @@ class HingeLoss(torch.nn.Module):
         :param y_pred: 1d tensor
         :return:
         """
-        y_pred = y_pred.squeeze(0)
+        # print(f'y_pred shape: {y_pred.shape}')
+        # print(f'y_true shape: {y_true.shape}')
+        print(f'y_pred.device: {y_pred.device}')
+        y_pred = y_pred.T.squeeze(0)
         y_true = y_true.squeeze(0)
-        mask = torch.ones(y_pred.shape, dtype=torch.bool)
-        mask[range(y_true.shape[0]), y_true] = False
-        res = torch.max((1. - y_pred[mask].view(y_pred.shape[0], -1).max(dim=1).values + y_pred[range(y_true.shape[0]), y_true]).float())
+        mask = torch.ones(y_pred.shape, dtype=torch.bool).to(y_pred.device)
+        mask[torch.LongTensor(range(y_true.shape[0])), y_true] = False
+        score_max_incorrect_tensor = y_pred[mask].view(y_pred.shape[0], -1).max(dim=1)[0].to(y_pred.device)
+        score_correct_tensor = y_pred[range(y_true.shape[0]), y_true].to(y_pred.device)
+        res = torch.max(torch.zeros(1), (1 + score_max_incorrect_tensor.sum() - score_correct_tensor.sum()).float())[0].to(y_pred.device)
         return res
-        # Y_i_size = y_true.shape[1]
-        # our_loss = -(1. / (Y_i_size * y_true.shape[0])) * torch.sum(log_prob_y_pred.gather(1, y_true.unsqueeze(1)))
-        # return our_loss
 
 
 if __name__ == '__main__':
@@ -61,8 +64,9 @@ if __name__ == '__main__':
     # print(lib_loss)
     # assert lib_loss == my_loss
 
-    y_pred = torch.tensor([[1, 2, 3], [2, 1, 17]]).unsqueeze(0)
-    y_true = torch.tensor([0, 0]).unsqueeze(0)
+    y_pred = torch.LongTensor([[1., 2], [3, 7], [4, 17]], ).unsqueeze(0)
+    y_true = torch.LongTensor([0., 0]).unsqueeze(0)
     h_loss = HingeLoss()
     loss = h_loss(y_pred, y_true)
+    loss.backward()
     print(loss)
