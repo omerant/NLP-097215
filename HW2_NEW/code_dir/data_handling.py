@@ -1,15 +1,16 @@
 from collections import defaultdict
 import torch
 from utils import split, get_vocabs, get_vocabs_dep_parser, WORD_IDX_IN_LINE, POS_IDX_IN_LINE, HEAD_IDX_IN_LINE, IGNORE_IDX
-# from torchtext.vocab import Vocab
+from torchtext.vocab import Vocab
 from torch.utils.data.dataset import Dataset, TensorDataset
 from torch.utils.data.dataloader import DataLoader
+import torch.nn as nn
 from pathlib import Path
 from collections import Counter
 from constants import PAD_TOKEN, SPECIAL_TOKENS, UNKNOWN_TOKEN, ROOT_TOKEN, ALPHA_DROPOUT, ROOT_POS
 import os.path as osp
 
-WORD_EMBED_SIZE = 100
+WORD_EMBED_SIZE = 300
 POS_EMBED_SIZE = 25
 
 
@@ -156,7 +157,7 @@ class DepDataReader:
 
 class DepDataset(Dataset):
     def __init__(self, word_dict, pos_dict, dir_path: str, file: str,
-                 padding=False, word_embeddings=None, train_word_dict=None, is_comp=False):
+                 padding=False, word_embeddings=False, train_word_dict=None, is_comp=False):
         super().__init__()
         self.word_dict = word_dict
         self.file = osp.join(dir_path, file)
@@ -164,7 +165,8 @@ class DepDataset(Dataset):
         # if train_word_dict is None: # we are filling
         self.vocab_size = len(self.datareader.word_dict)
         if word_embeddings:
-            self.word_idx_mappings, self.idx_word_mappings, self.word_vectors = word_embeddings
+            self.word_idx_mappings, self.idx_word_mappings, self.word_vectors = self.create_word_embeddings(
+                self.datareader.word_dict)
         else:
             self.word_idx_mappings, self.idx_word_mappings, self.word_vectors = self.init_word_idx_mapping(
                 self.datareader.word_dict)
@@ -184,6 +186,20 @@ class DepDataset(Dataset):
         word_dropout_prob, word_embed_idx, pos_embed_idx, head_idx, sentence_len = self.sentences_dataset[index]
         return word_dropout_prob, word_embed_idx, pos_embed_idx, head_idx, sentence_len
 
+    def create_word_embeddings(self, word_dict):
+        glove = Vocab(Counter(word_dict), vectors="glove.6B.300d", specials=SPECIAL_TOKENS)
+        pre_trained = nn.Embedding.from_pretrained(glove.vectors,freeze=False)
+        zeros = torch.zeros((self.vocab_size+len(SPECIAL_TOKENS), WORD_EMBED_SIZE))
+        embeds = pre_trained(torch.tensor(list(glove.stoi.values())))
+        concat = torch.cat([zeros,embeds],dim=1)
+        return glove.stoi, glove.itos, concat
+
+        # glove = Vocab(Counter(word_dict), vectors="glove.6B.300d", specials=SPECIAL_TOKENS)
+        # pre_trained = nn.Embedding.from_pretrained(glove.vectors, freeze=False)
+        # # zeros = torch.zeros((self.vocab_size + len(SPECIAL_TOKENS), WORD_EMBED_SIZE))
+        # embeds = pre_trained(torch.tensor(list(glove.stoi.values())))
+        # # concat = torch.cat([zeros, embeds], dim=1)
+        # return glove.stoi, glove.itos, embeds
     # @staticmethod
     def init_word_idx_mapping(self, word_dict):
         vectors = torch.zeros((self.vocab_size+len(SPECIAL_TOKENS), WORD_EMBED_SIZE))
