@@ -36,15 +36,33 @@ class HingeLoss(torch.nn.Module):
         # print(f'y_pred shape: {y_pred.shape}')
         # print(f'y_true shape: {y_true.shape}')
         # print(f'y_pred.requires_grad: {y_pred.requires_grad}')
-        y_pred = y_pred.T.squeeze(0)
+        # y_pred = y_pred.T.squeeze(0)
+        # y_true = y_true.squeeze(0)
+        # mask = torch.ones(y_pred.shape, dtype=torch.bool)
+        # mask[torch.LongTensor(range(y_true.shape[0])).to(y_pred.device), y_true] = False
+        # score_max_incorrect_tensor = y_pred[mask].view(y_pred.shape[0], -1).max(dim=1)[0] + 1 if y_pred[mask].shape[0] > 1 else y_pred[mask] + 1
+        # score_correct_tensor = y_pred[~mask]
+        # res = torch.max(torch.tensor([0], dtype=torch.float, requires_grad=True).to(y_pred.device),
+        #                 (1 + score_max_incorrect_tensor.sum() - score_correct_tensor.sum()).float())[0]
+        # return res
+
+        y_pred = y_pred.squeeze(0)
         y_true = y_true.squeeze(0)
+        # if y_true.shape[0] == 2:
+        #     print(f'scores: {y_pred}')
+        #     print(f'y_true: {y_true}')
         mask = torch.ones(y_pred.shape, dtype=torch.bool)
-        mask[torch.LongTensor(range(y_true.shape[0])).to(y_pred.device), y_true] = False
-        score_max_incorrect_tensor = y_pred[mask].view(y_pred.shape[0], -1).max(dim=1)[0] + 1 if y_pred[mask].shape[0] > 1 else y_pred[mask] + 1
+        mask[y_true, torch.LongTensor(range(y_true.shape[0])).to(y_pred.device)] = False
+        # if y_true.shape[0] == 2:
+        #     print(f'mask: {mask}')
+        score_max_incorrect_tensor = y_pred[mask].view(y_pred.shape[1], -1).max(dim=0)[0] + 1 if y_pred[mask].shape[0] > 1 else y_pred[mask] + 1
         score_correct_tensor = y_pred[~mask]
         res = torch.max(torch.tensor([0], dtype=torch.float, requires_grad=True).to(y_pred.device),
                         (1 + score_max_incorrect_tensor.sum() - score_correct_tensor.sum()).float())[0]
+        # if y_true.shape[0] == 2:
+        #     print(f'res: {res}')
         return res
+
 
 
 if __name__ == '__main__':
@@ -68,10 +86,27 @@ if __name__ == '__main__':
     y_pred = torch.tensor([[1., 2], [3, 7], [4, 17]], requires_grad=True).unsqueeze(0)
     y_true = torch.LongTensor([0., 0]).unsqueeze(0)
 
-    # y_pred = torch.tensor([[1., 2]], requires_grad=True).unsqueeze(0)
-    # y_true = torch.LongTensor([0.]).unsqueeze(0)
+
+
+
+
+    y_pred = torch.tensor([[0.1604, 0.166],
+                           [0.1598, 0.1652],
+                           [0.1514, 0.1568]], requires_grad=True).unsqueeze(0)
+    y_true = torch.LongTensor([2, 0]).unsqueeze(0)
+
     h_loss = HingeLoss()
     loss = h_loss(y_pred, y_true)
     loss.backward()
     print(loss)
 
+
+# cuda:0
+# scores: tensor([[0.1851, 0.1827],
+#         [0.1640, 0.1616],
+#         [0.1628, 0.1604]], device='cuda:0', grad_fn=<SqueezeBackward1>)
+# y_true: tensor([0, 1], device='cuda:0')
+# mask: tensor([[False,  True],
+#         [ True, False],
+#         [ True,  True]])
+# res: 2.999998092651367
