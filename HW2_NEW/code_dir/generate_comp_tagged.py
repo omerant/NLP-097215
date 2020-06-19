@@ -14,7 +14,7 @@ def calculate_comp(model, comp_dataloader, idx_word_mappings, idx_pos_mappings, 
                 _, words_idx_tensor, pos_idx_tensor, _, _ = input_data
                 words = [idx_word_mappings[word_idx.item()] for word_idx in words_idx_tensor.squeeze(0)][1:]
                 tags = [idx_pos_mappings[tag_idx.item()] for tag_idx in pos_idx_tensor.squeeze(0)][1:]
-                _, _, our_heads = model(words_idx_tensor, pos_idx_tensor, calc_mst=True)
+                _, our_heads, _,  = model(words_idx_tensor, pos_idx_tensor, calc_mst=True)
 
                 for word, tag, head in zip(words, tags, our_heads[1:]):
                     out_file.write(constract_line(cur_idx_in_sentence, word, tag, head))
