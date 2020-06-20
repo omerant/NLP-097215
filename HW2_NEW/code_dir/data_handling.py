@@ -1,7 +1,7 @@
 from collections import defaultdict
 import torch
 from utils import split, get_vocabs, get_vocabs_dep_parser, WORD_IDX_IN_LINE, POS_IDX_IN_LINE, HEAD_IDX_IN_LINE, IGNORE_IDX
-from torchtext.vocab import Vocab
+# from torchtext.vocab import Vocab
 from torch.utils.data.dataset import Dataset, TensorDataset
 from torch.utils.data.dataloader import DataLoader
 import torch.nn as nn
@@ -187,19 +187,28 @@ class DepDataset(Dataset):
         return word_dropout_prob, word_embed_idx, pos_embed_idx, head_idx, sentence_len
 
     def create_word_embeddings(self, word_dict):
-        glove = Vocab(Counter(word_dict), vectors="glove.6B.300d", specials=SPECIAL_TOKENS)
-        pre_trained = nn.Embedding.from_pretrained(glove.vectors,freeze=False)
-        zeros = torch.zeros((self.vocab_size+len(SPECIAL_TOKENS), WORD_EMBED_SIZE))
-        embeds = pre_trained(torch.tensor(list(glove.stoi.values())))
-        concat = torch.cat([zeros,embeds],dim=1)
-        return glove.stoi, glove.itos, concat
-
         # glove = Vocab(Counter(word_dict), vectors="glove.6B.300d", specials=SPECIAL_TOKENS)
-        # pre_trained = nn.Embedding.from_pretrained(glove.vectors, freeze=False)
-        # # zeros = torch.zeros((self.vocab_size + len(SPECIAL_TOKENS), WORD_EMBED_SIZE))
+        # pre_trained = nn.Embedding.from_pretrained(glove.vectors,freeze=False)
+        # zeros = torch.zeros((self.vocab_size+len(SPECIAL_TOKENS), WORD_EMBED_SIZE))
         # embeds = pre_trained(torch.tensor(list(glove.stoi.values())))
-        # # concat = torch.cat([zeros, embeds], dim=1)
-        # return glove.stoi, glove.itos, embeds
+        # concat = torch.cat([zeros,embeds],dim=1)
+        # return glove.stoi, glove.itos, concat
+
+        vectors = "glove.twitter.27B.200d"
+        print(f'using pre trained: {vectors}')
+        # vectors = "fasttext.en.300d"
+        # vectors = ["fasttext.en.300d", "fasttext.simple.300d", "glove.42B.300d", "glove.840B.300d", "glove.twitter.27B.25d",
+        #            "glove.twitter.27B.50d", "glove.twitter.27B.100d", "glove.twitter.27B.200d", "glove.6B.50d",
+        #            "glove.6B.100d", "glove.6B.200d", "glove.6B.300d"]
+        # for vecs in vectors:
+        glove = Vocab(Counter(word_dict), vectors=vectors, specials=SPECIAL_TOKENS)
+        pre_trained = nn.Embedding.from_pretrained(glove.vectors, freeze=False)
+        # zeros = torch.zeros((self.vocab_size + len(SPECIAL_TOKENS), WORD_EMBED_SIZE))
+        embeds = pre_trained(torch.tensor(list(glove.stoi.values())))
+        # concat = torch.cat([zeros, embeds], dim=1)
+        print(f'embeds.shape: {embeds.shape}')
+        print(f'borat_borat index : {glove.stoi["borat_borat"]}')
+        return glove.stoi, glove.itos, embeds
     # @staticmethod
     def init_word_idx_mapping(self, word_dict):
         vectors = torch.zeros((self.vocab_size+len(SPECIAL_TOKENS), WORD_EMBED_SIZE))

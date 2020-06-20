@@ -34,7 +34,8 @@ class DnnPosTagger(nn.Module):
 
 
 class DnnSepParser(nn.Module):
-    def __init__(self, word_emb_dim, tag_emb_dim, num_layers, word_vocab_size, tag_vocab_size, hidden_fc_dim):
+    def __init__(self, word_emb_dim, tag_emb_dim, num_layers, word_vocab_size, tag_vocab_size, hidden_fc_dim,
+                 word_embeddings=None, is_advanced=False):
         """
         :param word_emb_dim: dimension of word embedding
         :param tag_emb_dim: dimension of tag embedding
@@ -48,16 +49,21 @@ class DnnSepParser(nn.Module):
         self.hidden_dim_lstm = self.word_emb_dim + self.tag_emb_dim
         self.num_layers = num_layers
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.word_embedding = nn.Embedding(word_vocab_size, word_emb_dim)
+        if word_embeddings is not None:
+            self.word_embedding = nn.Embedding.from_pretrained(word_embeddings, freeze=False, max_norm=2)
+        else:
+            if is_advanced:
+                self.word_embedding = nn.Embedding(word_vocab_size, word_emb_dim, max_norm=2)
+            else:
+                self.word_embedding = nn.Embedding(word_vocab_size, word_emb_dim)
         self.tag_embedding = nn.Embedding(tag_vocab_size, tag_emb_dim)
         self.encoder = nn.LSTM(input_size=word_emb_dim + tag_emb_dim, hidden_size=self.hidden_dim_lstm, num_layers=num_layers,
                                bidirectional=True, batch_first=False)
-
         self.fc1 = nn.Linear(self.hidden_dim_lstm * 4, hidden_fc_dim)
         self.tan = nn.Tanh()
         self.fc2 = nn.Linear(hidden_fc_dim, 1)
         self.name = 'DnnDepParser' + '_' + 'word_emb-' + str(self.word_emb_dim) + '_' + 'tag_emb-' + str(self.tag_emb_dim) \
-                    + '_' + 'num_stack' + str(self.num_layers)
+                    + '_' + 'num_stack' + str(self.num_layers) + '_' + 'hidden_fc_dim-' + str(self.fc1.weight.shape[0])
 
     def load_embedding(self, word_embeddings, pos_embeddings):
         self.word_embedding = word_embeddings
@@ -80,6 +86,7 @@ class DnnSepParser(nn.Module):
         Z = first_part_out2 + second_part_out2
         out_1 = Z.view(-1, Z.shape[-1])  # [seq_length**2,hidden_dim_mlp]
 
+        # scores = self.fc2(self.tan(out_1)).view(lstm_out.shape[0], lstm_out.shape[0]).squeeze(0)
         scores = self.fc2(self.tan(out_1)).view(lstm_out.shape[0], lstm_out.shape[0]).squeeze(0)
         tmp_scores = F.log_softmax(scores, dim=1)
         # calc tree

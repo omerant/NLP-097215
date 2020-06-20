@@ -11,11 +11,12 @@ from model import DnnSepParser
 
 class Trainer:
 
-    def __init__(self, model, optimizer, loss, device):
+    def __init__(self, model, optimizer, loss, device, scheduler=None):
         self.model = model
         self.loss_fn = loss
         self.optimizer = optimizer
         self.device = device
+        self.scheduler = scheduler
 
     def train(self, num_epochs: int, dl_train: DataLoader, dl_val: DataLoader, acumulate_grad_steps: int,
               len_train: int, len_test: int, early_stopping: bool = None):
@@ -28,6 +29,7 @@ class Trainer:
             running_epoch_loss = 0.0
             epoch_time = time.time()
             i = 0
+
             for data in dl_train:
                 i += 1
                 # get the inputs
@@ -98,6 +100,8 @@ class Trainer:
             running_epoch_acc = []
             epoch_time = time.time()
             i = 0
+
+
             for data in dl_train:
                 i += 1
                 if i % 1000 == 0:
@@ -114,17 +118,17 @@ class Trainer:
                 dep_idx_tensor_2d = dep_idx_tensor.squeeze(0)
                 running_epoch_acc += [np.mean(dep_idx_tensor_2d.numpy()[1:] == our_heads[1:])]
 
-                # CALC LOSS ON SCORES
-                scores = scores.unsqueeze(0).permute(0, 2, 1)
-                loss = self.loss_fn(scores[:, :, 1:], dep_idx_tensor.to(self.device)[:, 1:])
-
-                # END CALC LOSS ON SCORES
+                # # CALC LOSS ON SCORES
+                # scores = scores.unsqueeze(0).permute(0, 2, 1)
+                # loss = self.loss_fn(scores[:, :, 1:], dep_idx_tensor.to(self.device)[:, 1:])
+                #
+                # # END CALC LOSS ON SCORES
                 # print(f'dep_idx_tensor.to(self.device)[:, 1:]: {dep_idx_tensor.to(self.device)[:, 1:]}')
 
 
 
 
-                # loss = self.loss_fn(dep_scores[:, :, 1:], dep_idx_tensor.to(self.device)[:, 1:])
+                loss = self.loss_fn(dep_scores[:, :, 1:], dep_idx_tensor.to(self.device)[:, 1:])
                 #
 
                 loss = loss / acumulate_grad_steps
@@ -135,6 +139,8 @@ class Trainer:
 
                 running_epoch_loss += loss.data.item()
             # Normalizing the loss by the total number of train batches
+            if self.scheduler is not None:
+                self.scheduler.step()
             running_epoch_loss /= (len_train/acumulate_grad_steps)
             train_loss_list.append(running_epoch_loss)
             # print(f'running_epoch_acc: {running_epoch_acc}')
@@ -206,6 +212,7 @@ class Trainer:
         unknow_acc_list = []
         loss_list = []
         non_skip_idx = 1
+        model.eval()
         with torch.no_grad():
             # count = 0
             for batch_idx, input_data in enumerate(dataloader):
@@ -222,12 +229,12 @@ class Trainer:
 
                         unknow_acc_list += [np.mean(dep_idx_tensor_2d.numpy()[1:][unk_idx_arr] == our_heads[1:][unk_idx_arr])]
 
-                    # CALC LOSS ON SCORES
-                    scores = scores.unsqueeze(0).permute(0, 2, 1)
-                    loss = loss_fn(scores[:, :, 1:], dep_idx_tensor.to(device)[:, 1:])
-                    # END CALC LOSS ON SCORES
+                    # # CALC LOSS ON SCORES
+                    # scores = scores.unsqueeze(0).permute(0, 2, 1)
+                    # loss = loss_fn(scores[:, :, 1:], dep_idx_tensor.to(device)[:, 1:])
+                    # # END CALC LOSS ON SCORES
 
-                    # loss = loss_fn(dep_scores[:, :, 1:], dep_idx_tensor.to(device)[:, 1:])
+                    loss = loss_fn(dep_scores[:, :, 1:], dep_idx_tensor.to(device)[:, 1:])
 
 
 
