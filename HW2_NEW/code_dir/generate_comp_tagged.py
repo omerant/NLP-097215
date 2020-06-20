@@ -60,7 +60,7 @@ def _gen_comp_files_model1(word_vocab_size, tag_vocab_size, test_dataloader, tes
     model.load_state_dict(train_info['net'])
     model.load_embedding(word_emb, tag_emb)
     calculate_comp(model=model, comp_dataloader=test_dataloader, idx_word_mappings=test_dataset.idx_word_mappings,
-                   idx_pos_mappings=test_dataset.idx_pos_mappings, output_path='comp_m1_311773915')
+                   idx_pos_mappings=test_dataset.idx_pos_mappings, output_path='comp_m1_311773915.wtag')
 
 
 def _gen_comp_files_model2(word_vocab_size, tag_vocab_size, test_dataloader, test_dataset):
@@ -74,7 +74,7 @@ def _gen_comp_files_model2(word_vocab_size, tag_vocab_size, test_dataloader, tes
     model.load_state_dict(train_info['net'])
     model.load_embedding(word_emb, tag_emb)
     calculate_comp(model=model, comp_dataloader=test_dataloader, idx_word_mappings=test_dataset.idx_word_mappings,
-                   idx_pos_mappings=test_dataset.idx_pos_mappings, output_path='comp_m2_311773915')
+                   idx_pos_mappings=test_dataset.idx_pos_mappings, output_path='comp_m2_311773915.wtag')
 
 
 if __name__ == '__main__':
